@@ -26,7 +26,7 @@ const COLUMNS = [
 // Main dashboard page: displays tasks in a Kanban board layout
 // Handles creating, editing, deleting tasks, and drag-and-drop between columns
 export function Dashboard() {
-  const { tasks, loading, error, createTask, updateTask, deleteTask } = useTasks();
+  const { tasks, loading, error, createTask, updateTask, updateTasks, deleteTask } = useTasks();
   const { filters, clearFilters } = useFilters();
   const { toasts, showToast, removeToast } = useToast();
 
@@ -59,12 +59,9 @@ export function Dashboard() {
     }
   };
 
-  const handleMoveTask = async (taskId: string, newStatus: TaskStatus, newPosition?: number) => {
-    const task = tasks.find((item) => item.id === taskId);
-    if (!task) return;
-    if (task.status === newStatus && (newPosition === undefined || task.position === newPosition)) return;
-
-    const result = await updateTask({ id: taskId, status: newStatus, position: newPosition });
+  const handleMoveTasks = async (updates: Array<{ id: string; status: TaskStatus; position: number }>) => {
+    if (updates.length === 0) return;
+    const result = await updateTasks(updates);
     if (result.success) {
       showToast('Task moved successfully', 'success');
     } else {
@@ -120,7 +117,7 @@ export function Dashboard() {
             tasks={tasks}
             onEdit={setEditingTask}
             onDelete={setDeletingTaskId}
-            onMoveTask={handleMoveTask}
+            onMoveTasks={handleMoveTasks}
           />
         ))}
       </div>

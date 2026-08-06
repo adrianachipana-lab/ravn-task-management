@@ -4,13 +4,14 @@ import { TaskStatus } from '../../types/task';
 import { TaskCard } from '../TaskCard';
 
 type DropPlacement = 'before' | 'after';
+type TaskPositionUpdate = { id: string; status: TaskStatus; position: number };
 
 interface TaskColumnProps {
   status: TaskStatus;
   tasks: Task[];
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
-  onMoveTask?: (taskId: string, newStatus: TaskStatus, newPosition?: number) => void;
+  onMoveTasks?: (updates: TaskPositionUpdate[]) => void;
 }
 
 // Human-readable labels for each status column header
@@ -34,32 +35,33 @@ function byPosition(first: Task, second: Task) {
 
 // A single Kanban column that filters and renders tasks matching its status
 // Supports drag-and-drop: cards can be dragged between columns to change status
-export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: TaskColumnProps) {
+export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTasks }: TaskColumnProps) {
   const columnTasks = tasks.filter((task) => task.status === status).sort(byPosition);
   const label = STATUS_LABELS[status] ?? status;
   const [dragOver, setDragOver] = useState(false);
   const [dropTarget, setDropTarget] = useState<{ taskId: string; placement: DropPlacement } | null>(null);
 
-  const getPositionAtEnd = (draggedTaskId?: string) => {
-    const nextOrder = draggedTaskId ? columnTasks.filter((task) => task.id !== draggedTaskId) : columnTasks;
-    const lastTask = nextOrder.at(-1);
-    return lastTask ? lastTask.position + 1 : 1;
-  };
-
-  const getPositionAroundTask = (draggedTaskId: string, targetTask: Task, placement: DropPlacement) => {
+  const getInsertIndex = (draggedTaskId: string, targetTask: Task, placement: DropPlacement) => {
     const nextOrder = columnTasks.filter((task) => task.id !== draggedTaskId);
     const targetIndex = nextOrder.findIndex((task) => task.id === targetTask.id);
-    if (targetIndex === -1) return getPositionAtEnd();
+    if (targetIndex === -1) return nextOrder.length;
 
-    const insertIndex = placement === 'before' ? targetIndex : targetIndex + 1;
-    const previousTask = nextOrder[insertIndex - 1];
-    const nextTask = nextOrder[insertIndex];
+    return placement === 'before' ? targetIndex : targetIndex + 1;
+  };
 
-    if (!previousTask && !nextTask) return targetTask.position;
-    if (!previousTask) return nextTask.position === 0 ? 0.5 : nextTask.position / 2;
-    if (!nextTask) return previousTask.position + 1;
-    if (previousTask.position === nextTask.position) return previousTask.position + 0.5;
-    return (previousTask.position + nextTask.position) / 2;
+  const buildPositionUpdates = (draggedTaskId: string, insertIndex: number) => {
+    const draggedTask = tasks.find((task) => task.id === draggedTaskId);
+    if (!draggedTask) return [];
+
+    const nextOrder = columnTasks.filter((task) => task.id !== draggedTaskId);
+    nextOrder.splice(insertIndex, 0, { ...draggedTask, status });
+
+    return nextOrder
+      .map((task, index) => ({ id: task.id, status, position: index + 1 }))
+      .filter((update) => {
+        const currentTask = tasks.find((task) => task.id === update.id);
+        return currentTask?.status !== update.status || currentTask.position !== update.position;
+      });
   };
 
   // Highlight the column when a card is dragged over it
@@ -94,14 +96,11 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: Task
     const draggedTaskId = e.dataTransfer.getData('application/task-id');
     setDragOver(false);
     setDropTarget(null);
-    if (!draggedTaskId || draggedTaskId === targetTask.id || !onMoveTask) return;
+    if (!draggedTaskId || draggedTaskId === targetTask.id || !onMoveTasks) return;
 
     const placement = getPlacementFromPointer(e);
-    const newPosition = getPositionAroundTask(draggedTaskId, targetTask, placement);
-    const draggedTask = tasks.find((task) => task.id === draggedTaskId);
-
-    if (draggedTask?.status === status && draggedTask.position === newPosition) return;
-    onMoveTask(draggedTaskId, status, newPosition);
+    const updates = buildPositionUpdates(draggedTaskId, getInsertIndex(draggedTaskId, targetTask, placement));
+    if (updates.length > 0) onMoveTasks(updates);
   };
 
   // Handle the drop on column background: move the task to the end of a different column
@@ -110,12 +109,9 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: Task
     setDragOver(false);
     setDropTarget(null);
     const taskId = e.dataTransfer.getData('application/task-id');
-    const sourceStatus = e.dataTransfer.getData('application/task-status');
-    if (taskId && onMoveTask) {
-      const newPosition = getPositionAtEnd(taskId);
-      const draggedTask = tasks.find((task) => task.id === taskId);
-      if (sourceStatus === status && draggedTask?.position === newPosition) return;
-      onMoveTask(taskId, status, newPosition);
+    if (taskId && onMoveTasks) {
+      const updates = buildPositionUpdates(taskId, columnTasks.filter((task) => task.id !== taskId).length);
+      if (updates.length > 0) onMoveTasks(updates);
     }
   };
 

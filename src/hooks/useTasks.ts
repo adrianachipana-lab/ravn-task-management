@@ -65,25 +65,42 @@ export function useTasks() {
 
   // Update an existing task by ID, then refetch
   const [updateTaskMutation] = useMutation(UPDATE_TASK);
+  const runUpdateTaskMutation = useCallback((input: UpdateTaskInput) => {
+    const variables: Record<string, unknown> = { id: input.id };
+    if (input.name !== undefined) variables.name = input.name;
+    if (input.status !== undefined) variables.status = input.status;
+    if (input.dueDate !== undefined) variables.dueDate = input.dueDate;
+    if (input.pointEstimate !== undefined) variables.pointEstimate = input.pointEstimate;
+    if (input.tags !== undefined) variables.tags = input.tags;
+    if (input.position !== undefined) variables.position = input.position;
+    if (input.assigneeId !== undefined) variables.assigneeId = input.assigneeId;
+
+    return updateTaskMutation({ variables: { input: variables } });
+  }, [updateTaskMutation]);
+
   const updateTask = useCallback(async (input: UpdateTaskInput) => {
     try {
-      const variables: Record<string, unknown> = { id: input.id };
-      if (input.name !== undefined) variables.name = input.name;
-      if (input.status !== undefined) variables.status = input.status;
-      if (input.dueDate !== undefined) variables.dueDate = input.dueDate;
-      if (input.pointEstimate !== undefined) variables.pointEstimate = input.pointEstimate;
-      if (input.tags !== undefined) variables.tags = input.tags;
-      if (input.position !== undefined) variables.position = input.position;
-      if (input.assigneeId !== undefined) variables.assigneeId = input.assigneeId;
-
-      await updateTaskMutation({ variables: { input: variables } });
+      await runUpdateTaskMutation(input);
       await refetch();
       return { success: true as const };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update task';
       return { success: false as const, error: message };
     }
-  }, [updateTaskMutation, refetch]);
+  }, [runUpdateTaskMutation, refetch]);
+
+  const updateTasks = useCallback(async (inputs: UpdateTaskInput[]) => {
+    try {
+      for (const input of inputs) {
+        await runUpdateTaskMutation(input);
+      }
+      await refetch();
+      return { success: true as const };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update tasks';
+      return { success: false as const, error: message };
+    }
+  }, [runUpdateTaskMutation, refetch]);
 
   // Delete a task by ID, then refetch
   const [deleteTaskMutation] = useMutation(DELETE_TASK);
@@ -108,6 +125,7 @@ export function useTasks() {
     error: error?.message ?? null,
     createTask,
     updateTask,
+    updateTasks,
     deleteTask,
   };
 }
