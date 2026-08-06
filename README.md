@@ -5,15 +5,23 @@ A Kanban-style task management application built for the RAVN frontend challenge
 ## Screenshots
 
 ### Dashboard (Board View)
+<!-- Add screenshot or GIF here -->
+
 The main view displays tasks organized in five Kanban columns: Backlog, To Do, In Progress, Done, and Cancelled. Each card shows the task name, tags, due date, estimated points, and assignee avatar.
 
 ### My Tasks (List View)
+<!-- Add screenshot or GIF here -->
+
 An alternative table layout groups tasks by status in collapsible sections. Clicking a row opens the edit form.
 
 ### Create / Edit Task
+<!-- Add screenshot or GIF here -->
+
 A modal with chip-style selectors for estimate, assignee, tags, and due date. On mobile, the date picker uses an iOS-style 3D scroll wheel.
 
 ### Settings
+<!-- Add screenshot or GIF here -->
+
 Displays the logged-in user's profile information fetched from the API.
 
 ## Setup & Running
@@ -26,8 +34,8 @@ Displays the logged-in user's profile information fetched from the API.
 
 ```bash
 # Clone the repository
-git clone https://github.com/adrianachipana-lab/ravn-nerdery.git
-cd agentic-engineer-frontend/challenge/task-management
+git clone https://github.com/adrianachipana-lab/ravn-task-management.git
+cd ravn-task-management
 
 # Install dependencies
 npm install
