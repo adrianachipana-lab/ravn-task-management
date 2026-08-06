@@ -45,7 +45,7 @@ describe('Modal', () => {
     );
 
     // Click on the overlay (not the dialog content)
-    const overlay = container.querySelector('.modal-overlay')!;
+    const overlay = container.querySelector('.modal__overlay')!;
     await user.click(overlay);
     expect(onClose).toHaveBeenCalledOnce();
   });

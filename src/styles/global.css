@@ -754,7 +754,7 @@ fieldset.search-filter__group {
 }
 
 /* ===== MODAL ===== */
-.modal-overlay {
+.modal__overlay {
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.65);
@@ -1498,6 +1498,15 @@ fieldset.search-filter__group {
   color: var(--color-text-secondary);
 }
 
+.not-found__btn {
+  padding: 10px 20px;
+  background-color: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+}
+
 /* ===== SETTINGS ===== */
 .settings {
   max-width: 600px;
@@ -1539,13 +1548,20 @@ fieldset.search-filter__group {
   color: var(--color-text-primary);
 }
 
+.settings__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 /* ===== MOBILE TABS (hidden on desktop) ===== */
 .mobile-tabs {
   display: none;
 }
 
 /* ===== SIDEBAR OVERLAY (mobile drawer) ===== */
-.sidebar-overlay {
+.sidebar__overlay {
   display: none;
 }
 
@@ -1583,7 +1599,7 @@ fieldset.search-filter__group {
     transform: translateX(0);
   }
 
-  .sidebar-overlay {
+  .sidebar__overlay {
     display: block;
     position: fixed;
     inset: 0;
@@ -1702,7 +1718,7 @@ fieldset.search-filter__group {
   }
 
   /* Modal: full screen */
-  .modal-overlay {
+  .modal__overlay {
     align-items: flex-start;
   }
 

@@ -47,7 +47,7 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
 
   return (
     <div
-      className="modal-overlay"
+      className="modal__overlay"
       ref={overlayRef}
       onClick={handleOverlayClick}
       onKeyDown={handleOverlayKeyDown}

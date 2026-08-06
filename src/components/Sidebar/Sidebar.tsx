@@ -21,7 +21,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       {/* Overlay for mobile drawer */}
       {open && (
         <div
-          className="sidebar-overlay"
+          className="sidebar__overlay"
           onClick={onClose}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose?.(); }}
           role="presentation"
