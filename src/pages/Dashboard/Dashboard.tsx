@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { ViewToggle } from '../../components/ViewToggle';
 import { SearchFilter } from '../../components/SearchFilter/SearchFilter';
@@ -23,6 +23,15 @@ const COLUMNS = [
   TaskStatus.CANCELLED,
 ];
 
+type TaskMoveUpdate = { id: string; status: TaskStatus; position: number };
+
+function applyTaskMoveUpdates(tasks: Task[], updates: TaskMoveUpdate[]) {
+  return tasks.map((task) => {
+    const update = updates.find((item) => item.id === task.id);
+    return update ? { ...task, status: update.status, position: update.position } : task;
+  });
+}
+
 // Main dashboard page: displays tasks in a Kanban board layout
 // Handles creating, editing, deleting tasks, and drag-and-drop between columns
 export function Dashboard() {
@@ -33,6 +42,12 @@ export function Dashboard() {
   const { setOnCreate } = useCreateTask();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [optimisticTasks, setOptimisticTasks] = useState<Task[] | null>(null);
+  const visibleTasks = optimisticTasks ?? tasks;
+
+  useEffect(() => {
+    setOptimisticTasks(null);
+  }, [tasks]);
 
   setOnCreate(() => setShowCreateForm(true));
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
@@ -59,12 +74,15 @@ export function Dashboard() {
     }
   };
 
-  const handleMoveTasks = async (updates: Array<{ id: string; status: TaskStatus; position: number }>) => {
+  const handleMoveTasks = async (updates: TaskMoveUpdate[]) => {
     if (updates.length === 0) return;
+    setOptimisticTasks(applyTaskMoveUpdates(visibleTasks, updates));
+
     const result = await updateTasks(updates);
     if (result.success) {
       showToast('Task moved successfully', 'success');
     } else {
+      setOptimisticTasks(null);
       showToast(result.error ?? 'Failed to move task', 'error');
     }
   };
@@ -92,7 +110,7 @@ export function Dashboard() {
       <SearchFilter />
 
       {/* Show loading spinner while fetching tasks */}
-      {loading && tasks.length === 0 && (
+      {loading && visibleTasks.length === 0 && (
         <div className="loading-spinner"><div className="loading-spinner__circle" /></div>
       )}
 
@@ -103,7 +121,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {!loading && tasks.length === 0 && Object.values(filters).some((v) => Array.isArray(v) ? v.length > 0 : v !== undefined) ? (
+      {!loading && visibleTasks.length === 0 && Object.values(filters).some((v) => Array.isArray(v) ? v.length > 0 : v !== undefined) ? (
         <div className="empty-results">
           <p className="empty-results__text">No tasks match the current filters</p>
           <button type="button" className="empty-results__btn" onClick={clearFilters}>Clear filters</button>
@@ -114,7 +132,7 @@ export function Dashboard() {
           <TaskColumn
             key={status}
             status={status}
-            tasks={tasks}
+            tasks={visibleTasks}
             onEdit={setEditingTask}
             onDelete={setDeletingTaskId}
             onMoveTasks={handleMoveTasks}
