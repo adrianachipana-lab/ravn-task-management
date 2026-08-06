@@ -1,260 +1,80 @@
-# Task Management App - Guia Paso a Paso
+# Task Management App - Step-by-Step Guide
 
-Esta guia explica como funciona cada parte de la app, que conceptos de React usa, y por que se hizo de esa manera.
+This guide explains how the application is organized, which React concepts it uses, and the reasoning behind the main implementation decisions.
 
 ---
 
-## Estructura del Proyecto
+## Project Structure
 
-```
+```text
 src/
-├── components/         # Componentes reutilizables de UI
-│   ├── Sidebar/        # Navegacion lateral
-│   ├── Header/         # Barra superior
-│   ├── TaskCard/       # Tarjeta individual de tarea
-│   ├── TaskColumn/     # Columna del kanban (Backlog, Todo, etc.)
-│   ├── TaskForm/       # Formulario para crear/editar tareas
-│   ├── Modal/          # Modal generico reutilizable
-│   ├── ConfirmDialog/  # Dialogo de confirmacion (para delete)
-│   ├── SearchFilter/   # Barra de filtros y busqueda
-│   ├── BottomNav/      # Navegacion mobile inferior
-│   ├── MobileTabs/     # Tabs mobile entre Dashboard y My Tasks
-│   ├── ViewToggle/     # Toggle visual board/list
-│   ├── LoadingSpinner/ # Indicador de carga
-│   └── Toast/          # Notificaciones temporales
-├── pages/              # Paginas (cada una es una ruta)
-│   ├── Dashboard/      # Pagina principal con el board
-│   ├── MyTasks/        # Vista tipo lista agrupada por estado
-│   ├── Settings/       # Pagina de perfil del usuario
-│   └── NotFound/       # Pagina 404
-├── hooks/              # Custom hooks (logica reutilizable)
-│   ├── useTasks.ts     # CRUD de tareas via GraphQL/Apollo
-│   ├── useCreateTask.ts# Puente para abrir create desde mobile nav
-│   └── useToast.ts     # Manejo de notificaciones
-├── graphql/            # Apollo Client, queries y mutations
-├── context/            # Filtros globales y bridge de create task
-├── types/              # Tipos de TypeScript
+├── components/         # Reusable UI components
+│   ├── Sidebar/        # Side navigation
+│   ├── Header/         # Top bar with search, notifications, and avatar
+│   ├── TaskCard/       # Individual task card for the board view
+│   ├── TaskColumn/     # Kanban column by status
+│   ├── TaskForm/       # Create/edit task form
+│   ├── Modal/          # Reusable modal shell
+│   ├── ConfirmDialog/  # Delete confirmation dialog
+│   ├── SearchFilter/   # Search and advanced filters
+│   ├── BottomNav/      # Mobile bottom navigation
+│   ├── MobileTabs/     # Mobile tabs between Dashboard and My Tasks
+│   ├── ViewToggle/     # Board/list view toggle
+│   ├── LoadingSpinner/ # Loading indicator
+│   └── Toast/          # Temporary notifications
+├── pages/              # Route-level pages
+│   ├── Dashboard/      # Main Kanban board
+│   ├── MyTasks/        # List/table task view
+│   ├── Settings/       # User profile page
+│   └── NotFound/       # 404 fallback page
+├── hooks/              # Reusable state and API logic
+│   ├── useTasks.ts     # Task CRUD through GraphQL/Apollo
+│   ├── useCreateTask.ts# Bridge for opening create task from mobile nav
+│   └── useToast.ts     # Toast notification state
+├── graphql/            # Apollo client, queries, and mutations
+├── context/            # Filter state and create-task bridge
+├── types/              # TypeScript domain types
 │   └── task.ts         # Task, User, enums, inputs
-├── styles/             # Estilos globales
-│   ├── variables.css   # Design tokens (colores, spacing, etc.)
-│   └── global.css      # Reset CSS y layout base
-├── utils/              # Funciones utilitarias
-│   ├── date.ts         # Formateo de fechas y color coding
-│   ├── tags.ts         # Labels y clases CSS para tags
-│   └── avatar.ts       # Validacion de avatar y fallback neutral
-├── App.tsx             # Componente raiz con routing
-└── main.tsx            # Punto de entrada de la app
+├── styles/             # Global styles
+│   ├── variables.css   # Design tokens
+│   └── global.css      # Reset, layout, and component styles
+├── utils/              # Pure helpers
+│   ├── date.ts         # Date formatting and color coding
+│   ├── tags.ts         # Tag labels and CSS class helpers
+│   └── avatar.ts       # Avatar validation and neutral fallback
+├── App.tsx             # Root component and routing
+└── main.tsx            # Application entry point
 ```
 
-**Por que esta estructura?**
-- **components/**: Cada componente reutilizable tiene su carpeta con `.tsx` e `index.ts`. Los estilos viven en CSS global con convencion BEM y tokens.
-- **pages/**: Separamos paginas de componentes porque las paginas son las que se conectan a las rutas.
-- **hooks/**: La logica de negocio vive en hooks, no en componentes. Asi los componentes solo se encargan de renderizar.
-- **graphql/**: Centraliza queries/mutations para no mezclar strings GraphQL dentro de UI.
-- **context/**: Mantiene estado compartido como filtros y acciones globales pequeñas.
-- **types/**: Centralizar tipos evita duplicacion y facilita cambios.
+Why this structure:
+
+- `components/` contains reusable UI building blocks.
+- `pages/` contains route-level views that coordinate data and page state.
+- `hooks/` keeps business logic and API operations outside UI components.
+- `graphql/` centralizes queries and mutations.
+- `context/` shares small pieces of cross-component state, such as filters.
+- `types/` keeps the domain model consistent across the app.
+- `utils/` contains pure helpers that can be tested independently.
 
 ---
 
-## Conceptos de React Explicados
+## React Concepts Used
 
-### 1. JSX y Componentes
+### 1. JSX and Components
 
 ```tsx
-// Un componente es una funcion que retorna JSX
 export function TaskCard({ task }: { task: Task }) {
   return (
     <article className="task-card">
-      <h3>{task.name}</h3>    {/* Expresion JS dentro de {} */}
+      <h3 className="task-card__title">{task.name}</h3>
     </article>
   );
 }
 ```
 
-JSX parece HTML pero es JavaScript. Se transforma en `React.createElement()` calls. Cada componente es una funcion que retorna UI.
+JSX looks like HTML, but it is JavaScript syntax compiled into React calls. Each component is a function that returns UI.
 
-### 2. Props (Propiedades)
-
-```tsx
-// Las props son los "argumentos" de un componente
-interface TaskCardProps {
-  task: Task;           // Data para mostrar
-  index: number;        // Posicion para animacion stagger
-  onEdit: (task: Task) => void;   // Callback al padre
-  onDelete: (id: string) => void; // Callback al padre
-}
-
-export function TaskCard({ task, index, onEdit, onDelete }: TaskCardProps) {
-  // Usamos las props para renderizar y manejar eventos
-}
-```
-
-**Flujo de datos**: Los datos bajan del padre al hijo via props. Los eventos suben del hijo al padre via callbacks.
-
-### 3. useState - Estado Local
-
-```tsx
-// useState retorna [valor, setter]
-const [menuOpen, setMenuOpen] = useState(false);
-
-// Cuando llamamos setMenuOpen, React re-renderiza el componente
-<button onClick={() => setMenuOpen(!menuOpen)}>
-```
-
-**Donde usamos useState:**
-- `Dashboard`: modales abiertos/cerrados, tarea seleccionada, tareas optimistas durante drag & drop
-- `TaskCard`: menu de opciones abierto/cerrado
-- `TaskForm`: cada campo del formulario
-- `TaskColumn`: estado visual de drag-over y linea de insercion
-
-### 4. useEffect - Side Effects
-
-```tsx
-useEffect(() => {
-  if (!menuOpen) return;
-
-  // Side effect: escuchar clicks en el document
-  const handleClickOutside = (e: MouseEvent) => {
-    if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-      setMenuOpen(false);
-    }
-  };
-  document.addEventListener('mousedown', handleClickOutside);
-
-  // Cleanup: se ejecuta al desmontar o cuando menuOpen cambia
-  return () => document.removeEventListener('mousedown', handleClickOutside);
-}, [menuOpen]); // Solo se ejecuta cuando menuOpen cambia
-```
-
-**Donde usamos useEffect:**
-- `TaskCard`: cerrar menu al clickear fuera
-- `Modal`: bloquear scroll del body, cerrar con Escape
-- `useToast`: auto-dismiss despues de 3 segundos
-- `Dashboard`: mantener el estado optimista hasta que el backend confirme el mismo orden
-
-### 5. useRef - Referencias al DOM
-
-```tsx
-const menuRef = useRef<HTMLDivElement>(null);
-
-// useRef nos da acceso directo al elemento DOM
-// Sin causar re-renders (a diferencia de useState)
-<div ref={menuRef}>
-  {/* Podemos usar menuRef.current para leer propiedades del DOM */}
-</div>
-```
-
-### 6. Custom Hooks
-
-```tsx
-// useTasks encapsula TODA la logica de comunicacion con la API
-export function useTasks() {
-  const { filters } = useFilters();
-  const { data, loading, error, refetch } = useQuery(GET_TASKS);
-
-  const updateTasks = useCallback(async (inputs: UpdateTaskInput[]) => {
-    // Ejecuta updateTask para las tareas afectadas y hace un refetch al final
-  }, []);
-
-  return { tasks: data?.tasks ?? [], loading, error, createTask, updateTask, updateTasks, deleteTask };
-}
-```
-
-**Por que custom hooks?**
-- Separan logica de UI
-- Son reutilizables en cualquier componente
-- Testeable independientemente
-- El componente queda limpio y facil de leer
-
-### 7. Rendering Lists con .map() y key
-
-```tsx
-{columnTasks.map((task, index) => (
-  <TaskCard
-    key={task.id}     // key UNICO para que React trackee cambios
-    task={task}
-    index={index}     // Para stagger animation
-    onEdit={onEdit}
-    onDelete={onDelete}
-  />
-))}
-```
-
-**key** es obligatorio al renderizar listas. React lo usa para saber que elementos cambiaron, se agregaron o se eliminaron. Sin key, React re-renderiza todo. Con key, solo actualiza lo que cambio.
-
-### 8. Conditional Rendering
-
-```tsx
-// Ternario: si no hay tareas, mostrar empty state
-{columnTasks.length === 0 ? (
-  <div className="task-column__empty"><p>No tasks</p></div>
-) : (
-  columnTasks.map(...)
-)}
-
-// && para renderizar condicionalmente
-{menuOpen && <div className="task-card__menu">...</div>}
-
-// null = no renderizar nada
-if (!isOpen) return null;
-```
-
-### 9. React Router - Navegacion SPA
-
-```tsx
-// App.tsx - Define las rutas
-<BrowserRouter>
-  <Routes>
-    <Route path="/" element={<Dashboard />} />
-    <Route path="/settings" element={<Settings />} />
-    <Route path="*" element={<NotFound />} />  {/* Catch-all = 404 */}
-  </Routes>
-</BrowserRouter>
-
-// Sidebar.tsx - Links de navegacion
-<NavLink
-  to="/settings"
-  className={({ isActive }) =>
-    `sidebar__nav-item ${isActive ? 'sidebar__nav-item--active' : ''}`
-  }
->
-```
-
-**NavLink vs Link**: NavLink sabe si la ruta esta activa y puede aplicar estilos.
-
-### 10. Formularios Controlados
-
-```tsx
-// Cada input tiene su estado en React
-const [name, setName] = useState('');
-
-<input
-  value={name}                    // React controla el valor
-  onChange={(e) => setName(e.target.value)}  // Actualiza en cada keystroke
-/>
-```
-
-El flujo es: usuario escribe -> onChange -> setState -> React re-renderiza -> input muestra nuevo valor. Esto nos da control total sobre los datos.
-
-### 11. Composition con children
-
-```tsx
-// Modal no sabe que va adentro, acepta cualquier children
-<Modal isOpen={true} title="Create Task">
-  <TaskForm />    {/* children - puede ser CUALQUIER componente */}
-</Modal>
-
-// Dentro de Modal:
-function Modal({ children }: { children: React.ReactNode }) {
-  return <div className="modal__body">{children}</div>;
-}
-```
-
----
-
-## TypeScript en React
-
-### Typing Props con Interfaces
+### 2. Props
 
 ```tsx
 interface TaskCardProps {
@@ -265,306 +85,513 @@ interface TaskCardProps {
 }
 ```
 
-### Const Objects como Enums (patron moderno)
+Data flows down through props. Events flow back up through callback props.
+
+### 3. Local State with `useState`
 
 ```tsx
-// Los enums de TS no funcionan con erasableSyntaxOnly
-// Usamos const objects que son 100% JavaScript valido
+const [menuOpen, setMenuOpen] = useState(false);
+```
+
+Local state is used for UI interactions such as open menus, active modals, form fields, collapsed sections, drag-over states, and optimistic task moves.
+
+### 4. Side Effects with `useEffect`
+
+```tsx
+useEffect(() => {
+  if (!menuOpen) return;
+
+  const handleClickOutside = (event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      setMenuOpen(false);
+    }
+  };
+
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, [menuOpen]);
+```
+
+Effects are used for browser interactions such as outside-click detection, Escape key handling, scroll locking, toast timers, and keeping optimistic drag-and-drop state until the backend confirms the same task order.
+
+### 5. DOM References with `useRef`
+
+```tsx
+const menuRef = useRef<HTMLDivElement>(null);
+```
+
+Refs are used when the app needs direct access to DOM nodes, for example detecting whether a click happened outside a menu or modal.
+
+### 6. Custom Hooks
+
+```tsx
+export function useTasks() {
+  const { filters } = useFilters();
+  const { data, loading, error, refetch } = useQuery(GET_TASKS);
+
+  return {
+    tasks: data?.tasks ?? [],
+    loading,
+    error,
+    refetch,
+  };
+}
+```
+
+Custom hooks keep reusable logic outside components. `useTasks` owns GraphQL CRUD operations, `useToast` owns notification state, and `useCreateTask` connects mobile navigation with the dashboard create modal.
+
+### 7. List Rendering and Keys
+
+```tsx
+{columnTasks.map((task, index) => (
+  <TaskCard
+    key={task.id}
+    task={task}
+    index={index}
+    onEdit={onEdit}
+    onDelete={onDelete}
+  />
+))}
+```
+
+Keys let React track which item changed, moved, or was removed. Task IDs are used as stable keys.
+
+### 8. Conditional Rendering
+
+```tsx
+{columnTasks.length === 0 ? (
+  <div className="task-column__empty">
+    <p>No tasks</p>
+  </div>
+) : (
+  columnTasks.map(...)
+)}
+```
+
+Conditional rendering is used for empty states, loading states, modals, dropdowns, menus, and error states.
+
+### 9. React Router
+
+```tsx
+<BrowserRouter>
+  <Routes>
+    <Route path="/" element={<Dashboard />} />
+    <Route path="/my-tasks" element={<MyTasks />} />
+    <Route path="/settings" element={<Settings />} />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+</BrowserRouter>
+```
+
+The app is a client-side SPA. `NavLink` is used for navigation items because it exposes the active route state for styling.
+
+### 10. Controlled Forms
+
+```tsx
+const [name, setName] = useState('');
+
+<input
+  value={name}
+  onChange={(event) => setName(event.target.value)}
+/>
+```
+
+Task creation and editing use controlled form fields so React owns the current form value and can validate or submit predictable data.
+
+### 11. Composition with `children`
+
+```tsx
+<Modal isOpen={showCreateForm} onClose={closeModal}>
+  <TaskForm onSubmit={handleCreate} onCancel={closeModal} />
+</Modal>
+```
+
+The modal component does not know what content it renders. It receives children, which keeps it reusable for create, edit, and confirmation flows.
+
+---
+
+## TypeScript in React
+
+### Props with Interfaces
+
+```tsx
+interface TaskColumnProps {
+  status: TaskStatus;
+  tasks: Task[];
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
+}
+```
+
+Interfaces document component contracts and catch incorrect usage during development.
+
+### Const Objects as Enums
+
+```tsx
 export const TaskStatus = {
   BACKLOG: 'BACKLOG',
   TODO: 'TODO',
   IN_PROGRESS: 'IN_PROGRESS',
+  DONE: 'DONE',
+  CANCELLED: 'CANCELLED',
 } as const;
 
-// Extraemos el tipo del objeto
 export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
-// Resultado: 'BACKLOG' | 'TODO' | 'IN_PROGRESS'
 ```
 
-### import type vs import
+The project uses const objects instead of TypeScript enums because they compile to plain JavaScript patterns and work well with strict TypeScript settings.
+
+### `import type`
 
 ```tsx
-// import type: solo para tipos, se borra en compilacion
-import type { Task, CreateTaskInput } from '../types/task';
-
-// import normal: para valores que se usan en runtime
-import { TaskStatus } from '../types/task';
+import type { Task, UpdateTaskInput } from '../types/task';
 ```
 
-### Record<K, V> y Partial<T>
-
-```tsx
-// Record: mapa tipado
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  [TaskStatus.BACKLOG]: 'Backlog',
-  // ...
-};
-
-// Partial: todos los campos opcionales
-interface UpdateTaskInput extends Partial<CreateTaskInput> {
-  id: string;  // solo id es obligatorio
-}
-```
+Type-only imports make runtime imports cleaner and avoid shipping unnecessary values.
 
 ---
 
-## Estilos: CSS Global + BEM + Design Tokens
+## Styling: Global CSS + BEM + Design Tokens
 
-### BEM
+The project uses global CSS with BEM naming and CSS variables.
 
 ```tsx
-<article className="task-card">
+<article className="task-card task-card--dragging">
   <h3 className="task-card__title">{task.name}</h3>
 </article>
 ```
 
-Se uso CSS global con nombres BEM (`task-card__title`, `task-card--dragging`) para mantener clases predecibles, evitar runtime extra y seguir cerca del design system.
+BEM conventions used:
 
-### Variables CSS (Design Tokens)
+- Block: `task-card`, `sidebar`, `modal`, `task-table`
+- Element: `task-card__title`, `sidebar__nav-item`, `modal__overlay`
+- Modifier: `task-card--dragging`, `sidebar__nav-item--active`
+
+Design tokens live in `variables.css`:
 
 ```css
-/* variables.css - Un solo lugar para todos los valores */
 :root {
   --color-primary: #da584b;
+  --color-bg-main: #222528;
   --spacing-md: 16px;
   --radius-md: 8px;
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --duration-fast: 120ms;
-}
-
-/* Se usan en cualquier componente */
-.task-card {
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  transition: transform var(--duration-fast) var(--ease-out);
 }
 ```
+
+This keeps colors, spacing, radius, and animation durations consistent across the app.
 
 ---
 
-## Animaciones (Emil Kowalski Design Principles)
+## GraphQL and Apollo Client
 
-### Stagger Animation en Cards
-
-```css
-.task-card {
-  opacity: 0;
-  animation: cardEnter 400ms var(--ease-out) forwards;
-  animation-delay: var(--stagger-delay, 0ms);
-}
-
-/* Cada card entra 50ms despues de la anterior */
-```
+The app talks to the challenge API through Apollo Client.
 
 ```tsx
-<article style={{ '--stagger-delay': `${index * 50}ms` }}>
+const { data, loading, error, refetch } = useQuery(GET_TASKS, {
+  variables: { input: apiInput },
+  fetchPolicy: 'cache-and-network',
+});
 ```
 
-### Hover: solo en dispositivos con mouse
+Why Apollo:
 
-```css
-/* Evita hover falsos en touch devices */
-@media (hover: hover) and (pointer: fine) {
-  .task-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-card-hover);
-  }
-}
-```
+- Built-in loading and error states
+- Query and mutation hooks
+- Cache management
+- Easy refetch after mutations
+- Clear integration with TypeScript types
 
-### Botones con feedback tactil
+The API token is read from environment variables:
 
-```css
-.button:active {
-  transform: scale(0.97);  /* Feedback instantaneo */
-}
-```
-
-### Modales: nunca desde scale(0)
-
-```css
-/* MAL: aparece de la nada */
-.modal { transform: scale(0); }
-
-/* BIEN: empieza casi visible */
-@keyframes modalIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(8px);
-  }
-}
-```
-
-### Easing curves custom
-
-```css
-/* ease-out custom: da sensacion de respuesta inmediata */
---ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-
-/* Los easings default de CSS son debiles.
-   Estos custom curves hacen que las animaciones
-   se sientan intencionales y profesionales. */
-```
-
-### Reduced motion
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  * { animation-duration: 0.01ms !important; }
-}
+```env
+VITE_API_URL=https://syn-api-production-e95c.up.railway.app/graphql
+VITE_API_TOKEN=your-token-here
 ```
 
 ---
 
-## Flujo de Datos: Como funciona el CRUD
+## Dashboard Flow
 
-### Crear Tarea
+1. `Dashboard` calls `useTasks()` to load tasks.
+2. Tasks are grouped by status through `TaskColumn`.
+3. Each `TaskColumn` renders matching `TaskCard` components.
+4. The red plus button opens `TaskForm` inside `Modal`.
+5. Create, update, delete, and drag-and-drop actions call GraphQL mutations through `useTasks`.
+6. Toasts display success or error feedback.
 
-```
-1. Usuario clickea boton "+"
-2. Dashboard: setShowCreateModal(true)
-3. Se renderiza Modal con TaskForm dentro
-4. Usuario llena el formulario (controlled inputs)
-5. Usuario clickea "Create Task"
-6. TaskForm llama onSubmit(data) -> callback al padre
-7. Dashboard: handleCreate llama useTasks.createTask(data)
-8. useTasks ejecuta createTask mutation en la API
-9. Apollo/refetch actualiza la lista y React re-renderiza
-10. showToast('Task created', 'success')
-11. setShowCreateModal(false) -> modal se cierra
-```
+The board uses five statuses:
 
-### Editar Tarea
-
-```
-1. Usuario clickea los 3 dots en una tarjeta
-2. TaskCard: setMenuOpen(true) -> aparece dropdown
-3. Usuario clickea "Edit"
-4. TaskCard: onEdit(task) -> callback al padre
-5. Dashboard: setEditingTask(task) -> abre modal con datos
-6. TaskForm recibe initialData -> campos pre-llenados
-7. Usuario modifica y clickea "Update Task"
-8. Dashboard: handleUpdate -> useTasks.updateTask({id, ...data})
-9. useTasks ejecuta updateTask mutation y refetch
-10. Toast de exito, modal se cierra
-```
-
-### Eliminar Tarea
-
-```
-1. Usuario clickea los 3 dots -> "Delete"
-2. TaskCard: onDelete(task.id) -> callback al padre
-3. Dashboard: setDeletingTaskId(id) -> abre ConfirmDialog
-4. Usuario clickea "Delete" en el dialogo
-5. Dashboard: handleDelete -> useTasks.deleteTask(id)
-6. useTasks ejecuta deleteTask mutation y refetch
-7. Toast de exito, dialogo se cierra
-```
-
-### Filtrar Tareas
-
-```
-1. Usuario clickea "Filter" en toolbar
-2. Dashboard: setSearchOpen(true) -> aparece SearchFilter
-3. Usuario escribe o selecciona filtros
-4. SearchFilter: onChange(newFilters) -> callback al padre
-5. SearchFilter actualiza FilterContext
-6. useTasks envia filtros soportados al query tasks
-7. DueDate se filtra client-side porque la API exige timestamp exacto
-8. Si 0 resultados: se muestra el estado vacio (`empty-results`)
-```
-
-### Drag & Drop y Reordenamiento
-
-```
-1. TaskCard escribe task-id y task-status en dataTransfer al iniciar drag
-2. TaskColumn detecta si el cursor esta en la mitad superior o inferior de una card
-3. Se muestra una linea roja indicando si la tarea caera antes o despues
-4. Al soltar, TaskColumn calcula el nuevo orden de la columna
-5. Se generan updates con posiciones enteras (1, 2, 3...) para evitar errores de DB
-6. Dashboard aplica el cambio optimistamente para que la UI responda al instante
-7. useTasks ejecuta updateTask para las tareas afectadas y hace refetch al final
-8. Dashboard mantiene el estado optimista hasta que el backend confirma el mismo orden
-9. Si la API falla, se revierte al estado real y aparece un toast de error
-```
-
-Esto no era un requerimiento explicito como reorder dentro de la misma columna, pero se agrego porque el documento menciona editar `position` y porque hace que el Kanban se sienta completo.
+- Backlog
+- To Do
+- In Progress
+- Done
+- Cancelled
 
 ---
 
-## Stack Tecnologico
+## Task Card
 
-| Tecnologia | Para que |
-|---|---|
-| React 19 | Libreria de UI |
-| TypeScript | Type safety |
-| Vite | Build tool + dev server |
-| Apollo Client | Cliente GraphQL, cache, loading/error states |
-| React Router | Routing SPA |
-| Lucide React | Iconos |
-| CSS global + BEM | Estilos predecibles con bajo overhead |
-| CSS Custom Properties | Design tokens globales |
-| Vitest + Testing Library | Tests unitarios/de componentes |
-| Vercel | Deploy de produccion |
+Each task card shows:
+
+- Task name
+- Tags
+- Due date
+- Estimated points
+- Assignee avatar
+- Three-dot options menu
+
+The date color is calculated with helper functions:
+
+- Green: on time
+- Yellow: less than two days left
+- Red: overdue
+
+Invalid or missing user avatars are replaced with a local neutral SVG fallback.
 
 ---
 
-## Como Correr el Proyecto
+## Create and Edit Task Flow
+
+The same `TaskForm` component is used for both create and edit.
+
+For create:
+
+```tsx
+<TaskForm onSubmit={handleCreate} onCancel={closeCreateForm} />
+```
+
+For edit:
+
+```tsx
+<TaskForm
+  initialData={editingTask}
+  onSubmit={handleUpdate}
+  onCancel={closeEditForm}
+/>
+```
+
+Fields handled by the form:
+
+- Name
+- Status
+- Position
+- Tags
+- Due date
+- Estimated points
+- Assignee
+
+The mobile date picker uses `@ncdai/react-wheel-picker` to match the iOS-style picker shown in the Figma design.
+
+---
+
+## Search and Filters
+
+The app supports:
+
+- Name
+- Due date
+- Owner/assignee
+- Status
+- Tags
+- Estimated points
+
+Most filters are sent to the API. Due date is filtered client-side by comparing the date portion because the API expects exact timestamps.
+
+When filters return no results, the UI shows an empty state and a clear-filters action.
+
+---
+
+## Drag and Drop
+
+Drag-and-drop supports:
+
+- Moving a task to another column
+- Reordering tasks inside the same column
+- Updating the task status
+- Updating integer task positions
+- Showing a red insertion indicator before or after the hovered card
+- Optimistically updating the UI before the backend response finishes
+
+The implementation avoids fractional positions. When a card is moved, the affected tasks are renumbered with integer positions:
+
+```text
+1, 2, 3, 4...
+```
+
+This keeps the mutation payload aligned with the backend expectations and avoids invalid database values.
+
+---
+
+## My Tasks View
+
+`MyTasks` provides a list/table layout grouped by status.
+
+Features:
+
+- Collapsible sections
+- Task count per section
+- First visible tag plus a `+N` button for extra tags
+- Assignee avatar and name
+- Due date color accents
+- Task name button that opens the edit modal
+
+---
+
+## Settings Page
+
+The settings route uses the `profile` query and displays:
+
+- Full name
+- Email
+- Type
+- Position
+- Created at
+- Updated at
+- Avatar
+
+There was no provided design for this screen, so it follows the same spacing, colors, and card style used in the rest of the app.
+
+---
+
+## Error Handling
+
+The app handles errors at several levels:
+
+- Query errors show an error state.
+- Mutation errors show toast notifications.
+- Delete actions require confirmation.
+- `ErrorBoundary` catches unexpected runtime errors.
+- Invalid avatars fall back to a local default image.
+
+---
+
+## Performance and Quality
+
+Quality checks used:
 
 ```bash
-# Instalar dependencias
-npm install
-
-# Iniciar en desarrollo
-npm run dev
-
-# Build de produccion
-npm run build
-
-# Type-check sin build
 npm run typecheck
-
-# Tests
-npm run test:run
-
-# Lint
 npm run lint
+npm run test
+npx react-doctor@latest --verbose
+```
+
+Current React Doctor result:
+
+```text
+Score: 100 / 100
+No issues found
+```
+
+Performance-related decisions:
+
+- Lazy-loaded route pages
+- Memoized filter-derived values
+- Optimistic drag-and-drop updates
+- Batched task position mutations followed by a single refetch
+- Pure helpers outside render-heavy components where appropriate
+
+---
+
+## Deployment
+
+The app is deployed on Vercel.
+
+Production URL:
+
+```text
+https://ravn-task-management.vercel.app
+```
+
+For SPA routing, `vercel.json` rewrites all routes back to `index.html`:
+
+```json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
 ```
 
 ---
 
-## Checklist del Challenge
+## Requirement Checklist
 
-| # | Requirement | Status |
-|---|---|---|
-| 1 | Folder structure | Hecho |
-| 1 | Routing (Dashboard, Settings, 404) | Hecho |
-| 1 | Styles solution (CSS global BEM + tokens) | Hecho |
-| 2 | Sidebar con logo y navegacion | Hecho |
-| 2 | Header con avatar y notificaciones | Hecho |
-| 2 | Columnas (Backlog, Todo, In Progress, Done, Cancelled) | Hecho |
-| 2 | Task cards con nombre, tags, fecha, puntos, avatar | Hecho |
-| 2 | Menu de opciones (3 dots) | Hecho |
-| 2 | Iconos de grid/list view | Hecho |
-| 2 | Boton "+" para crear | Hecho |
-| 3 | Mostrar tareas en columna segun status | Hecho |
-| 3 | Empty state cuando no hay resultados | Hecho |
-| 3 | Modal de crear tarea con boton "+" | Hecho |
-| 3 | Error handling (toasts de error) | Hecho |
-| 4 | Editar tarea (modal con campos editables) | Hecho |
-| 4 | Confirmar y cancelar en edicion | Hecho |
-| 4 | Notificacion de exito/error en update | Hecho |
-| 4 | Eliminar tarea con confirmacion | Hecho |
-| 4 | Notificacion de exito/error en delete | Hecho |
-| 5 | Filtrar por: Name, Status, Points, Assignee, DueDate | Hecho |
-| 5 | Empty state con filtros activos | Hecho |
-| 6 | Pagina Settings con info del usuario | Hecho |
-| Bonus | Color coding de fechas (green/yellow/red) | Hecho |
-| Bonus | Conteo de tareas por columna | Hecho |
-| Bonus | Animaciones al agregar tareas | Hecho |
-| Bonus | Drag & drop entre columnas con update de status | Hecho |
-| Extra | Reordenar tareas dentro de la misma columna | Hecho |
-| Extra | Indicador visual de insercion durante drag | Hecho |
-| Extra | Updates optimistas al mover tareas | Hecho |
-| Extra | Fallback neutral para usuarios sin avatar valido | Hecho |
-| Extra | Deploy en Vercel | Hecho |
+### Initial Setup
+
+- [x] Folder structure
+- [x] Routing configuration
+- [x] Styles solution
+- [x] TypeScript setup
+- [x] Linter
+- [x] Error boundary
+
+### Dashboard UI
+
+- [x] Sidebar logo
+- [x] Sidebar navigation items
+- [x] Active navigation state
+- [x] Header avatar
+- [x] Notification icon
+- [x] Search icon
+- [x] Board/list view icons
+- [x] Red plus button
+- [x] Status columns
+- [x] Task cards with name, tags, due date, points, avatar, and options menu
+
+### API Integration
+
+- [x] Tasks query
+- [x] Loading state
+- [x] Error state
+- [x] Empty state
+- [x] Create task mutation
+- [x] Create error handling
+
+### Update and Delete
+
+- [x] Update task mutation
+- [x] Edit modal
+- [x] Editable name, due date, position, status, tags, and estimated points
+- [x] Confirm and cancel buttons
+- [x] Delete task mutation
+- [x] Delete confirmation
+- [x] Success and error notifications
+
+### Search and Filters
+
+- [x] Name filter
+- [x] Due date filter
+- [x] Owner/assignee filter
+- [x] Status filter
+- [x] Tags filter
+- [x] Estimated points filter
+- [x] Empty results UI
+
+### Profile
+
+- [x] Settings route
+- [x] Profile query
+- [x] Full name
+- [x] Email
+- [x] Type
+- [x] Position
+- [x] Created at
+- [x] Updated at
+
+### Bonus and UX Improvements
+
+- [x] Drag and drop between columns
+- [x] Same-column task reordering
+- [x] Task count per column
+- [x] List view
+- [x] Date color coding
+- [x] Card animations
+- [x] Visual drop indicators
+- [x] Optimistic task moves
+- [x] Responsive mobile layout
+- [x] Neutral avatar fallback
+- [x] React Doctor 100/100

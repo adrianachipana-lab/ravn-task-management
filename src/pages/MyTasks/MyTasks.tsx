@@ -162,15 +162,17 @@ export function MyTasks() {
                     <div
                       key={task.id}
                       className="task-table__row"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setEditingTask(task)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setEditingTask(task); }}
                     >
                       <div className="task-table__row-border" style={{ backgroundColor: borderColor }} />
                       <div className="task-table__col-name">
                         <span className="task-table__row-number">{String(index + 1).padStart(2, '0')}</span>
-                        <span className="task-table__row-task-name">{task.name}</span>
+                        <button
+                          type="button"
+                          className="task-table__row-task-name"
+                          onClick={() => setEditingTask(task)}
+                        >
+                          {task.name}
+                        </button>
                         {task.tags.length > 0 && (
                           <span className="task-table__row-icons">
                             <span className="task-table__row-icon"><MessageCircle size={12} /></span>
@@ -184,13 +186,13 @@ export function MyTasks() {
                         )}
                         {task.tags.length > 1 && (
                           <div className="task-table__tag-more-wrapper">
-                            <span
+                            <button
+                              type="button"
                               className="task-table__tag-more"
                               onClick={(e) => { e.stopPropagation(); setTagPopup(tagPopup === task.id ? null : task.id); }}
-                              role="button"
-                              tabIndex={0}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); setTagPopup(tagPopup === task.id ? null : task.id); } }}
-                            >+{task.tags.length - 1}</span>
+                            >
+                              +{task.tags.length - 1}
+                            </button>
                             {tagPopup === task.id && (
                               <div className="task-table__tag-popup">
                                 {task.tags.slice(1).map((tag) => (

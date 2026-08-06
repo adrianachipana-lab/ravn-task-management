@@ -1290,12 +1290,22 @@ fieldset.search-filter__group {
 }
 
 .task-table__row-task-name {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
   font-size: 15px;
   font-weight: 400;
   color: white;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: left;
+  cursor: pointer;
+}
+
+.task-table__row-task-name:hover {
+  color: var(--color-primary);
 }
 
 .task-table__row-icons {
@@ -1338,7 +1348,9 @@ fieldset.search-filter__group {
 .task-table__tag--rails { background-color: var(--color-tag-rails); color: var(--color-tag-rails-text); }
 
 .task-table__tag-more {
+  border: none;
   font-size: 11px;
+  font-family: inherit;
   font-weight: 600;
   padding: 3px 8px;
   border-radius: var(--radius-sm);

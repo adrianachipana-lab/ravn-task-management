@@ -91,9 +91,7 @@ export function useTasks() {
 
   const updateTasks = useCallback(async (inputs: UpdateTaskInput[]) => {
     try {
-      for (const input of inputs) {
-        await runUpdateTaskMutation(input);
-      }
+      await Promise.all(inputs.map((input) => runUpdateTaskMutation(input)));
       await refetch();
       return { success: true as const };
     } catch (err) {

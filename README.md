@@ -16,7 +16,7 @@ The main view displays tasks organized in five Kanban columns: Backlog, To Do, I
 ### My Tasks (List View)
 <!-- Add screenshot or GIF here -->
 
-An alternative table layout groups tasks by status in collapsible sections. Clicking a row opens the edit form.
+An alternative table layout groups tasks by status in collapsible sections. Clicking a task name opens the edit form.
 
 ### Create / Edit Task
 <!-- Add screenshot or GIF here -->
@@ -152,7 +152,7 @@ src/
 - [x] **View toggle** — Switch between board (Kanban) and list (table) views using the toolbar icons.
 
 ### Additional Features (not in Figma, added to improve UX)
-- [x] **Same-column task reordering** — Cards can be reordered inside a column by dropping before/after another card. This was not explicitly required, but supports the editable `position` field and makes the board feel complete.
+- [x] **Same-column task reordering** — Cards can be reordered inside a column by dropping before/after another card, updating the editable `position` field through the API.
 - [x] **Visual drop indicators** — While dragging, a red insertion line shows whether the task will be placed before or after the hovered card.
 - [x] **Optimistic task moves** — The board updates immediately on drop and waits for backend confirmation, avoiding a slow drag-and-drop feel.
 - [x] **Neutral avatar fallback** — Users without a valid API avatar show a local generic SVG instead of a misleading stock face.

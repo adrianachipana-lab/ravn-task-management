@@ -33,10 +33,20 @@ function byPosition(first: Task, second: Task) {
   return first.position - second.position;
 }
 
+function getPlacementFromPointer(e: React.DragEvent) {
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  return e.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
+}
+
 // A single Kanban column that filters and renders tasks matching its status
 // Supports drag-and-drop: cards can be dragged between columns to change status
 export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTasks }: TaskColumnProps) {
-  const columnTasks = tasks.filter((task) => task.status === status).sort(byPosition);
+  const columnTasks = tasks.reduce<Task[]>((matchingTasks, task) => {
+    if (task.status === status) matchingTasks.push(task);
+    return matchingTasks;
+  }, []);
+  columnTasks.sort(byPosition);
+
   const label = STATUS_LABELS[status] ?? status;
   const [dragOver, setDragOver] = useState(false);
   const [dropTarget, setDropTarget] = useState<{ taskId: string; placement: DropPlacement } | null>(null);
@@ -56,12 +66,18 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTasks }: Tas
     const nextOrder = columnTasks.filter((task) => task.id !== draggedTaskId);
     nextOrder.splice(insertIndex, 0, { ...draggedTask, status });
 
-    return nextOrder
-      .map((task, index) => ({ id: task.id, status, position: index + 1 }))
-      .filter((update) => {
-        const currentTask = tasks.find((task) => task.id === update.id);
-        return currentTask?.status !== update.status || currentTask.position !== update.position;
-      });
+    const currentTasksById = new Map(tasks.map((task) => [task.id, task]));
+    const updates: TaskPositionUpdate[] = [];
+
+    nextOrder.forEach((task, index) => {
+      const update = { id: task.id, status, position: index + 1 };
+      const currentTask = currentTasksById.get(update.id);
+      if (currentTask?.status !== update.status || currentTask.position !== update.position) {
+        updates.push(update);
+      }
+    });
+
+    return updates;
   };
 
   // Highlight the column when a card is dragged over it
@@ -74,11 +90,6 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTasks }: Tas
     if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setDragOver(false);
     setDropTarget(null);
-  };
-
-  const getPlacementFromPointer = (e: React.DragEvent) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    return e.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
   };
 
   const handleCardDragOver = (e: React.DragEvent, targetTask: Task) => {
