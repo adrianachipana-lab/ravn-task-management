@@ -1,4 +1,5 @@
 import { Search, Bell } from 'lucide-react';
+import { DEFAULT_AVATAR_URL } from '../../utils/avatar';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -30,7 +31,7 @@ export function Header({ onMenuClick, searchValue, onSearchChange }: HeaderProps
         <button type="button" className="header__avatar-btn" onClick={onMenuClick} aria-label="Menu">
           <img
             className="header__avatar"
-            src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&h=160&q=80"
+            src={DEFAULT_AVATAR_URL}
             alt="Profile"
           />
         </button>

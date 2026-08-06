@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getAvatarUrl } from './avatar';
+import { DEFAULT_AVATAR_URL, getAvatarUrl } from './avatar';
 
 describe('getAvatarUrl', () => {
   it('returns a valid API avatar URL when provided', () => {
@@ -7,13 +7,13 @@ describe('getAvatarUrl', () => {
     expect(getAvatarUrl(avatar, 'Jane Doe')).toBe(avatar);
   });
 
-  it('returns a stock avatar when the API avatar is missing', () => {
-    expect(getAvatarUrl(null, 'Jane Doe')).toContain('images.unsplash.com');
-    expect(getAvatarUrl('', 'Jane Doe')).toContain('images.unsplash.com');
+  it('returns a neutral default avatar when the API avatar is missing', () => {
+    expect(getAvatarUrl(null, 'Jane Doe')).toBe(DEFAULT_AVATAR_URL);
+    expect(getAvatarUrl('', 'Jane Doe')).toBe(DEFAULT_AVATAR_URL);
   });
 
-  it('returns a stock avatar when the API avatar is not a URL', () => {
-    expect(getAvatarUrl('/avatar.png', 'Jane Doe')).toContain('images.unsplash.com');
-    expect(getAvatarUrl('not-an-image', 'Jane Doe')).toContain('images.unsplash.com');
+  it('returns a neutral default avatar when the API avatar is not a URL', () => {
+    expect(getAvatarUrl('/avatar.png', 'Jane Doe')).toBe(DEFAULT_AVATAR_URL);
+    expect(getAvatarUrl('not-an-image', 'Jane Doe')).toBe(DEFAULT_AVATAR_URL);
   });
 });
