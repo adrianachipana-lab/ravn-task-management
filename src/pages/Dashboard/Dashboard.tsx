@@ -32,6 +32,13 @@ function applyTaskMoveUpdates(tasks: Task[], updates: TaskMoveUpdate[]) {
   });
 }
 
+function hasAppliedTaskMoveUpdates(tasks: Task[], updates: TaskMoveUpdate[]) {
+  return updates.every((update) => {
+    const task = tasks.find((item) => item.id === update.id);
+    return task?.status === update.status && task.position === update.position;
+  });
+}
+
 // Main dashboard page: displays tasks in a Kanban board layout
 // Handles creating, editing, deleting tasks, and drag-and-drop between columns
 export function Dashboard() {
@@ -43,11 +50,15 @@ export function Dashboard() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [optimisticTasks, setOptimisticTasks] = useState<Task[] | null>(null);
+  const [pendingMoveUpdates, setPendingMoveUpdates] = useState<TaskMoveUpdate[]>([]);
   const visibleTasks = optimisticTasks ?? tasks;
 
   useEffect(() => {
-    setOptimisticTasks(null);
-  }, [tasks]);
+    if (pendingMoveUpdates.length > 0 && hasAppliedTaskMoveUpdates(tasks, pendingMoveUpdates)) {
+      setOptimisticTasks(null);
+      setPendingMoveUpdates([]);
+    }
+  }, [pendingMoveUpdates, tasks]);
 
   setOnCreate(() => setShowCreateForm(true));
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
@@ -77,12 +88,14 @@ export function Dashboard() {
   const handleMoveTasks = async (updates: TaskMoveUpdate[]) => {
     if (updates.length === 0) return;
     setOptimisticTasks(applyTaskMoveUpdates(visibleTasks, updates));
+    setPendingMoveUpdates(updates);
 
     const result = await updateTasks(updates);
     if (result.success) {
       showToast('Task moved successfully', 'success');
     } else {
       setOptimisticTasks(null);
+      setPendingMoveUpdates([]);
       showToast(result.error ?? 'Failed to move task', 'error');
     }
   };
