@@ -519,6 +519,7 @@ fieldset.search-filter__group {
 
 /* ===== TASK CARD ===== */
 .task-card {
+  position: relative;
   background-color: var(--color-bg-card);
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
@@ -545,6 +546,40 @@ fieldset.search-filter__group {
 .task-card--dragging {
   opacity: 0.4;
   cursor: grabbing;
+}
+
+.task-card--drop-before,
+.task-card--drop-after {
+  transform: translateY(0);
+}
+
+.task-card--drop-before {
+  margin-top: 18px;
+}
+
+.task-card--drop-after {
+  margin-bottom: 18px;
+}
+
+.task-card--drop-before::before,
+.task-card--drop-after::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 999px;
+  background-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-subtle);
+  pointer-events: none;
+}
+
+.task-card--drop-before::before {
+  top: -11px;
+}
+
+.task-card--drop-after::after {
+  bottom: -11px;
 }
 
 @keyframes card-enter {

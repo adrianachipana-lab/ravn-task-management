@@ -11,6 +11,8 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   onDropTask?: (event: React.DragEvent, targetTask: Task) => void;
+  onDragOverTask?: (event: React.DragEvent, targetTask: Task) => void;
+  dropPlacement?: 'before' | 'after' | null;
 }
 
 // Pure function: doesn't use component state, so it's defined outside to avoid re-creation on each render
@@ -20,7 +22,7 @@ function handleDragEnd(e: React.DragEvent) {
 
 // Individual task card displayed in the Kanban board columns
 // Wrapped in memo() to skip re-renders when props haven't changed
-export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete, onDropTask }: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete, onDropTask, onDragOverTask, dropPlacement }: TaskCardProps) {
   // handleDragStart needs access to task.id, so it must stay inside the component
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('application/task-id', task.id);
@@ -33,6 +35,7 @@ export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete, 
     if (!onDropTask) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    onDragOverTask?.(e, task);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -61,7 +64,7 @@ export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete, 
 
   return (
     <article
-      className="task-card"
+      className={`task-card${dropPlacement ? ` task-card--drop-${dropPlacement}` : ''}`}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}

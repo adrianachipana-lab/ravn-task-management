@@ -3,6 +3,8 @@ import type { Task } from '../../types/task';
 import { TaskStatus } from '../../types/task';
 import { TaskCard } from '../TaskCard';
 
+type DropPlacement = 'before' | 'after';
+
 interface TaskColumnProps {
   status: TaskStatus;
   tasks: Task[];
@@ -36,6 +38,7 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: Task
   const columnTasks = tasks.filter((task) => task.status === status).sort(byPosition);
   const label = STATUS_LABELS[status] ?? status;
   const [dragOver, setDragOver] = useState(false);
+  const [dropTarget, setDropTarget] = useState<{ taskId: string; placement: DropPlacement } | null>(null);
 
   const getPositionAtEnd = (draggedTaskId?: string) => {
     const nextOrder = draggedTaskId ? columnTasks.filter((task) => task.id !== draggedTaskId) : columnTasks;
@@ -43,7 +46,7 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: Task
     return lastTask ? lastTask.position + 1 : 1;
   };
 
-  const getPositionAroundTask = (draggedTaskId: string, targetTask: Task, placement: 'before' | 'after') => {
+  const getPositionAroundTask = (draggedTaskId: string, targetTask: Task, placement: DropPlacement) => {
     const nextOrder = columnTasks.filter((task) => task.id !== draggedTaskId);
     const targetIndex = nextOrder.findIndex((task) => task.id === targetTask.id);
     if (targetIndex === -1) return getPositionAtEnd();
@@ -67,14 +70,32 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: Task
   const handleDragLeave = (e: React.DragEvent) => {
     if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setDragOver(false);
+    setDropTarget(null);
+  };
+
+  const getPlacementFromPointer = (e: React.DragEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    return e.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
+  };
+
+  const handleCardDragOver = (e: React.DragEvent, targetTask: Task) => {
+    const draggedTaskId = e.dataTransfer.getData('application/task-id');
+    if (!draggedTaskId || draggedTaskId === targetTask.id) {
+      setDropTarget(null);
+      return;
+    }
+
+    setDragOver(true);
+    setDropTarget({ taskId: targetTask.id, placement: getPlacementFromPointer(e) });
   };
 
   const handleCardDrop = (e: React.DragEvent, targetTask: Task) => {
     const draggedTaskId = e.dataTransfer.getData('application/task-id');
+    setDragOver(false);
+    setDropTarget(null);
     if (!draggedTaskId || draggedTaskId === targetTask.id || !onMoveTask) return;
 
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const placement = e.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
+    const placement = getPlacementFromPointer(e);
     const newPosition = getPositionAroundTask(draggedTaskId, targetTask, placement);
     const draggedTask = tasks.find((task) => task.id === draggedTaskId);
 
@@ -86,6 +107,7 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: Task
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
+    setDropTarget(null);
     const taskId = e.dataTransfer.getData('application/task-id');
     const sourceStatus = e.dataTransfer.getData('application/task-status');
     if (taskId && onMoveTask) {
@@ -116,7 +138,16 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: Task
           <div className="task-column__empty"><p>No tasks</p></div>
         ) : (
           columnTasks.map((task, index) => (
-            <TaskCard key={task.id} task={task} index={index} onEdit={onEdit} onDelete={onDelete} onDropTask={handleCardDrop} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              index={index}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onDropTask={handleCardDrop}
+              onDragOverTask={handleCardDragOver}
+              dropPlacement={dropTarget?.taskId === task.id ? dropTarget.placement : null}
+            />
           ))
         )}
       </div>

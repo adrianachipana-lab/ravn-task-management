@@ -98,4 +98,29 @@ describe('TaskColumn drag and drop', () => {
 
     expect(onMoveTask).toHaveBeenCalledWith(secondTask.id, TaskStatus.BACKLOG, 0);
   });
+
+  it('shows an insertion indicator while dragging over a target card', () => {
+    render(<TaskColumn status={TaskStatus.BACKLOG} tasks={[task, secondTask]} onEdit={vi.fn()} onDelete={vi.fn()} onMoveTask={vi.fn()} />);
+
+    const targetCard = screen.getByText('Build dashboard').closest('article')!;
+    targetCard.getBoundingClientRect = () => ({
+      top: 0,
+      left: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    fireEvent.dragOver(targetCard, {
+      dataTransfer: {
+        getData: (key: string) => key === 'application/task-id' ? secondTask.id : TaskStatus.BACKLOG,
+      },
+    });
+
+    expect(targetCard).toHaveClass('task-card--drop-before');
+  });
 });
