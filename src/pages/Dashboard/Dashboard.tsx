@@ -59,8 +59,12 @@ export function Dashboard() {
     }
   };
 
-  const handleMoveTask = async (taskId: string, newStatus: TaskStatus) => {
-    const result = await updateTask({ id: taskId, status: newStatus });
+  const handleMoveTask = async (taskId: string, newStatus: TaskStatus, newPosition?: number) => {
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    if (task.status === newStatus && (newPosition === undefined || task.position === newPosition)) return;
+
+    const result = await updateTask({ id: taskId, status: newStatus, position: newPosition });
     if (result.success) {
       showToast('Task moved successfully', 'success');
     }

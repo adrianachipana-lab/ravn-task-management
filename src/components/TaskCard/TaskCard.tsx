@@ -10,6 +10,7 @@ interface TaskCardProps {
   index: number;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  onDropTask?: (event: React.DragEvent, targetTask: Task) => void;
 }
 
 // Pure function: doesn't use component state, so it's defined outside to avoid re-creation on each render
@@ -19,12 +20,26 @@ function handleDragEnd(e: React.DragEvent) {
 
 // Individual task card displayed in the Kanban board columns
 // Wrapped in memo() to skip re-renders when props haven't changed
-export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete }: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete, onDropTask }: TaskCardProps) {
   // handleDragStart needs access to task.id, so it must stay inside the component
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('application/task-id', task.id);
+    e.dataTransfer.setData('application/task-status', task.status);
     e.dataTransfer.effectAllowed = 'move';
     (e.currentTarget as HTMLElement).classList.add('task-card--dragging');
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!onDropTask) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!onDropTask) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onDropTask(e, task);
   };
 
   // Context menu state (3-dot options button)
@@ -50,6 +65,8 @@ export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete }
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
       style={{ '--stagger-delay': `${index * 50}ms` } as React.CSSProperties}
     >
       <div className="task-card__header">

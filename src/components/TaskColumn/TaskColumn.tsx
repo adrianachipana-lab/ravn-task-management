@@ -8,7 +8,7 @@ interface TaskColumnProps {
   tasks: Task[];
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
-  onMoveTask?: (taskId: string, newStatus: TaskStatus) => void;
+  onMoveTask?: (taskId: string, newStatus: TaskStatus, newPosition?: number) => void;
 }
 
 // Human-readable labels for each status column header
@@ -26,12 +26,37 @@ function handleDragOver(e: React.DragEvent) {
   e.dataTransfer.dropEffect = 'move';
 }
 
+function byPosition(first: Task, second: Task) {
+  return first.position - second.position;
+}
+
 // A single Kanban column that filters and renders tasks matching its status
 // Supports drag-and-drop: cards can be dragged between columns to change status
 export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: TaskColumnProps) {
-  const columnTasks = tasks.filter((task) => task.status === status);
+  const columnTasks = tasks.filter((task) => task.status === status).sort(byPosition);
   const label = STATUS_LABELS[status] ?? status;
   const [dragOver, setDragOver] = useState(false);
+
+  const getPositionAtEnd = (draggedTaskId?: string) => {
+    const nextOrder = draggedTaskId ? columnTasks.filter((task) => task.id !== draggedTaskId) : columnTasks;
+    const lastTask = nextOrder.at(-1);
+    return lastTask ? lastTask.position + 1 : 1;
+  };
+
+  const getPositionAroundTask = (draggedTaskId: string, targetTask: Task, placement: 'before' | 'after') => {
+    const nextOrder = columnTasks.filter((task) => task.id !== draggedTaskId);
+    const targetIndex = nextOrder.findIndex((task) => task.id === targetTask.id);
+    if (targetIndex === -1) return getPositionAtEnd();
+
+    const insertIndex = placement === 'before' ? targetIndex : targetIndex + 1;
+    const previousTask = nextOrder[insertIndex - 1];
+    const nextTask = nextOrder[insertIndex];
+
+    if (!previousTask && !nextTask) return targetTask.position;
+    if (!previousTask) return nextTask.position - 1;
+    if (!nextTask) return previousTask.position + 1;
+    return (previousTask.position + nextTask.position) / 2;
+  };
 
   // Highlight the column when a card is dragged over it
   const handleDragEnter = (e: React.DragEvent) => {
@@ -44,13 +69,30 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: Task
     setDragOver(false);
   };
 
-  // Handle the drop: extract the task ID and update its status
+  const handleCardDrop = (e: React.DragEvent, targetTask: Task) => {
+    const draggedTaskId = e.dataTransfer.getData('application/task-id');
+    if (!draggedTaskId || draggedTaskId === targetTask.id || !onMoveTask) return;
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const placement = e.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
+    const newPosition = getPositionAroundTask(draggedTaskId, targetTask, placement);
+    const draggedTask = tasks.find((task) => task.id === draggedTaskId);
+
+    if (draggedTask?.status === status && draggedTask.position === newPosition) return;
+    onMoveTask(draggedTaskId, status, newPosition);
+  };
+
+  // Handle the drop on column background: move the task to the end of a different column
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const taskId = e.dataTransfer.getData('application/task-id');
+    const sourceStatus = e.dataTransfer.getData('application/task-status');
     if (taskId && onMoveTask) {
-      onMoveTask(taskId, status);
+      const newPosition = getPositionAtEnd(taskId);
+      const draggedTask = tasks.find((task) => task.id === taskId);
+      if (sourceStatus === status && draggedTask?.position === newPosition) return;
+      onMoveTask(taskId, status, newPosition);
     }
   };
 
@@ -74,7 +116,7 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: Task
           <div className="task-column__empty"><p>No tasks</p></div>
         ) : (
           columnTasks.map((task, index) => (
-            <TaskCard key={task.id} task={task} index={index} onEdit={onEdit} onDelete={onDelete} />
+            <TaskCard key={task.id} task={task} index={index} onEdit={onEdit} onDelete={onDelete} onDropTask={handleCardDrop} />
           ))
         )}
       </div>
