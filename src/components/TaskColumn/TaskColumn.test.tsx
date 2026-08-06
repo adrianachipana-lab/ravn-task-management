@@ -22,6 +22,13 @@ const secondTask: Task = {
   position: 2,
 };
 
+const thirdTask: Task = {
+  ...task,
+  id: 'task-4',
+  name: 'Write docs',
+  position: 3,
+};
+
 const todoTask: Task = {
   ...task,
   id: 'task-3',
@@ -96,7 +103,33 @@ describe('TaskColumn drag and drop', () => {
       },
     });
 
-    expect(onMoveTask).toHaveBeenCalledWith(secondTask.id, TaskStatus.BACKLOG, 0);
+    expect(onMoveTask).toHaveBeenCalledWith(secondTask.id, TaskStatus.BACKLOG, 0.5);
+  });
+
+  it('uses an intermediate position when dropping between two tasks', () => {
+    const onMoveTask = vi.fn();
+    render(<TaskColumn status={TaskStatus.BACKLOG} tasks={[task, secondTask, thirdTask]} onEdit={vi.fn()} onDelete={vi.fn()} onMoveTask={onMoveTask} />);
+
+    const targetCard = screen.getByText('Fix filters').closest('article')!;
+    targetCard.getBoundingClientRect = () => ({
+      top: 0,
+      left: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    fireEvent.drop(targetCard, {
+      dataTransfer: {
+        getData: (key: string) => key === 'application/task-id' ? thirdTask.id : TaskStatus.BACKLOG,
+      },
+    });
+
+    expect(onMoveTask).toHaveBeenCalledWith(thirdTask.id, TaskStatus.BACKLOG, 1.5);
   });
 
   it('shows an insertion indicator while dragging over a target card', () => {

@@ -56,8 +56,9 @@ export function TaskColumn({ status, tasks, onEdit, onDelete, onMoveTask }: Task
     const nextTask = nextOrder[insertIndex];
 
     if (!previousTask && !nextTask) return targetTask.position;
-    if (!previousTask) return nextTask.position - 1;
+    if (!previousTask) return nextTask.position === 0 ? 0.5 : nextTask.position / 2;
     if (!nextTask) return previousTask.position + 1;
+    if (previousTask.position === nextTask.position) return previousTask.position + 0.5;
     return (previousTask.position + nextTask.position) / 2;
   };
 

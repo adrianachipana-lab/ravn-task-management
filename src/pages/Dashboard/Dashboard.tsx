@@ -67,6 +67,8 @@ export function Dashboard() {
     const result = await updateTask({ id: taskId, status: newStatus, position: newPosition });
     if (result.success) {
       showToast('Task moved successfully', 'success');
+    } else {
+      showToast(result.error ?? 'Failed to move task', 'error');
     }
   };
 
