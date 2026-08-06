@@ -11,8 +11,23 @@ function hashName(fullName: string): number {
   return [...fullName].reduce((hash, char) => hash + char.charCodeAt(0), 0);
 }
 
+function getFallbackAvatar(fullName: string): string {
+  return STOCK_AVATARS[hashName(fullName) % STOCK_AVATARS.length];
+}
+
+function isValidImageUrl(avatar: string | null | undefined): avatar is string {
+  if (!avatar?.trim()) return false;
+
+  try {
+    const url = new URL(avatar);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 // Returns the user's avatar URL, or a deterministic stock portrait when the API has none
 export function getAvatarUrl(avatar: string | null | undefined, fullName: string): string {
-  if (avatar) return avatar;
-  return STOCK_AVATARS[hashName(fullName) % STOCK_AVATARS.length];
+  if (isValidImageUrl(avatar)) return avatar;
+  return getFallbackAvatar(fullName);
 }
