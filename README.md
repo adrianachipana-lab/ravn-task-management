@@ -109,7 +109,7 @@ src/
 ├── pages/               # Route pages (Dashboard, MyTasks, Settings, NotFound)
 ├── styles/              # Global CSS and design tokens
 ├── types/               # TypeScript type definitions
-└── utils/               # Pure utility functions (date formatting, tag helpers)
+└── utils/               # Pure utility functions (date formatting, tag helpers, avatar fallback)
 ```
 
 ## Architecture Decisions
@@ -119,6 +119,8 @@ src/
 - **Lazy-loaded pages**: Each page is code-split with `React.lazy()` to minimize the initial bundle size.
 - **Context for cross-component communication**: `FilterContext` shares filter state between the search bar (Header) and the filter panel (SearchFilter) without prop drilling. `CreateTaskContext` bridges the bottom nav's "+" button with the dashboard's modal.
 - **Server-side + client-side filtering**: Filters like status, tags, and assignee are sent to the API. Date filtering is done client-side because the API requires exact timestamp matching.
+- **Optimistic drag-and-drop updates**: Task moves are reflected in the UI immediately, then synchronized with the API. If the API rejects the update, the UI reverts and shows an error toast.
+- **Integer task positions**: Same-column reordering renumbers affected tasks with integer positions (`1, 2, 3...`) to avoid backend/database errors from fractional values.
 - **`useMemo` for context values**: Prevents unnecessary re-renders of all consumers when the provider re-renders.
 
 ## Features Completed
@@ -150,6 +152,10 @@ src/
 - [x] **View toggle** — Switch between board (Kanban) and list (table) views using the toolbar icons.
 
 ### Additional Features (not in Figma, added to improve UX)
+- [x] **Same-column task reordering** — Cards can be reordered inside a column by dropping before/after another card. This was not explicitly required, but supports the editable `position` field and makes the board feel complete.
+- [x] **Visual drop indicators** — While dragging, a red insertion line shows whether the task will be placed before or after the hovered card.
+- [x] **Optimistic task moves** — The board updates immediately on drop and waits for backend confirmation, avoiding a slow drag-and-drop feel.
+- [x] **Neutral avatar fallback** — Users without a valid API avatar show a local generic SVG instead of a misleading stock face.
 - [x] **Advanced filter panel** — The Figma only shows a search bar, but the challenge doc requires filtering by status, tags, assignee, due date, and estimated points. I added a collapsible filter panel with dropdowns and tag toggle buttons that sends filters to the API. Available in both Dashboard and My Tasks views.
 - [x] **Error boundary** — Catches runtime errors and shows a recovery UI instead of a white screen.
 - [x] **Click-outside to close** — Menus, dropdowns, and modals close when clicking outside.

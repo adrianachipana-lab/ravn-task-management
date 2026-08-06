@@ -17,33 +17,41 @@ src/
 │   ├── Modal/          # Modal generico reutilizable
 │   ├── ConfirmDialog/  # Dialogo de confirmacion (para delete)
 │   ├── SearchFilter/   # Barra de filtros y busqueda
-│   ├── EmptyState/     # Estado vacio cuando no hay resultados
+│   ├── BottomNav/      # Navegacion mobile inferior
+│   ├── MobileTabs/     # Tabs mobile entre Dashboard y My Tasks
+│   ├── ViewToggle/     # Toggle visual board/list
+│   ├── LoadingSpinner/ # Indicador de carga
 │   └── Toast/          # Notificaciones temporales
 ├── pages/              # Paginas (cada una es una ruta)
 │   ├── Dashboard/      # Pagina principal con el board
+│   ├── MyTasks/        # Vista tipo lista agrupada por estado
 │   ├── Settings/       # Pagina de perfil del usuario
 │   └── NotFound/       # Pagina 404
 ├── hooks/              # Custom hooks (logica reutilizable)
-│   ├── useTasks.ts     # CRUD de tareas + filtros
+│   ├── useTasks.ts     # CRUD de tareas via GraphQL/Apollo
+│   ├── useCreateTask.ts# Puente para abrir create desde mobile nav
 │   └── useToast.ts     # Manejo de notificaciones
+├── graphql/            # Apollo Client, queries y mutations
+├── context/            # Filtros globales y bridge de create task
 ├── types/              # Tipos de TypeScript
 │   └── task.ts         # Task, User, enums, inputs
-├── mocks/              # Data falsa para desarrollo
-│   └── data.ts         # Tareas y usuarios de ejemplo
 ├── styles/             # Estilos globales
 │   ├── variables.css   # Design tokens (colores, spacing, etc.)
 │   └── global.css      # Reset CSS y layout base
 ├── utils/              # Funciones utilitarias
 │   ├── date.ts         # Formateo de fechas y color coding
-│   └── tags.ts         # Labels y clases CSS para tags
+│   ├── tags.ts         # Labels y clases CSS para tags
+│   └── avatar.ts       # Validacion de avatar y fallback neutral
 ├── App.tsx             # Componente raiz con routing
 └── main.tsx            # Punto de entrada de la app
 ```
 
 **Por que esta estructura?**
-- **components/**: Cada componente tiene su carpeta con `.tsx`, `.module.css`, e `index.ts`. Esto mantiene todo encapsulado.
+- **components/**: Cada componente reutilizable tiene su carpeta con `.tsx` e `index.ts`. Los estilos viven en CSS global con convencion BEM y tokens.
 - **pages/**: Separamos paginas de componentes porque las paginas son las que se conectan a las rutas.
 - **hooks/**: La logica de negocio vive en hooks, no en componentes. Asi los componentes solo se encargan de renderizar.
+- **graphql/**: Centraliza queries/mutations para no mezclar strings GraphQL dentro de UI.
+- **context/**: Mantiene estado compartido como filtros y acciones globales pequeñas.
 - **types/**: Centralizar tipos evita duplicacion y facilita cambios.
 
 ---
@@ -56,7 +64,7 @@ src/
 // Un componente es una funcion que retorna JSX
 export function TaskCard({ task }: { task: Task }) {
   return (
-    <article className={styles.card}>
+    <article className="task-card">
       <h3>{task.name}</h3>    {/* Expresion JS dentro de {} */}
     </article>
   );
@@ -94,10 +102,10 @@ const [menuOpen, setMenuOpen] = useState(false);
 ```
 
 **Donde usamos useState:**
-- `Dashboard`: modales abiertos/cerrados, tarea seleccionada
+- `Dashboard`: modales abiertos/cerrados, tarea seleccionada, tareas optimistas durante drag & drop
 - `TaskCard`: menu de opciones abierto/cerrado
 - `TaskForm`: cada campo del formulario
-- `useTasks`: lista de tareas, filtros, loading, error
+- `TaskColumn`: estado visual de drag-over y linea de insercion
 
 ### 4. useEffect - Side Effects
 
@@ -122,6 +130,7 @@ useEffect(() => {
 - `TaskCard`: cerrar menu al clickear fuera
 - `Modal`: bloquear scroll del body, cerrar con Escape
 - `useToast`: auto-dismiss despues de 3 segundos
+- `Dashboard`: mantener el estado optimista hasta que el backend confirme el mismo orden
 
 ### 5. useRef - Referencias al DOM
 
@@ -138,16 +147,16 @@ const menuRef = useRef<HTMLDivElement>(null);
 ### 6. Custom Hooks
 
 ```tsx
-// useTasks encapsula TODA la logica de tareas
+// useTasks encapsula TODA la logica de comunicacion con la API
 export function useTasks() {
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
-  const [filters, setFilters] = useState<FilterInput>({});
+  const { filters } = useFilters();
+  const { data, loading, error, refetch } = useQuery(GET_TASKS);
 
-  const createTask = useCallback((input: CreateTaskInput) => {
-    // ... logica de crear
+  const updateTasks = useCallback(async (inputs: UpdateTaskInput[]) => {
+    // Ejecuta updateTask para las tareas afectadas y hace un refetch al final
   }, []);
 
-  return { tasks, createTask, updateTask, deleteTask, filters, setFilters };
+  return { tasks: data?.tasks ?? [], loading, error, createTask, updateTask, updateTasks, deleteTask };
 }
 ```
 
@@ -178,13 +187,13 @@ export function useTasks() {
 ```tsx
 // Ternario: si no hay tareas, mostrar empty state
 {columnTasks.length === 0 ? (
-  <div className={styles.empty}><p>No tasks</p></div>
+  <div className="task-column__empty"><p>No tasks</p></div>
 ) : (
   columnTasks.map(...)
 )}
 
 // && para renderizar condicionalmente
-{menuOpen && <div className={styles.menu}>...</div>}
+{menuOpen && <div className="task-card__menu">...</div>}
 
 // null = no renderizar nada
 if (!isOpen) return null;
@@ -206,7 +215,7 @@ if (!isOpen) return null;
 <NavLink
   to="/settings"
   className={({ isActive }) =>
-    `${styles.navItem} ${isActive ? styles.active : ''}`
+    `sidebar__nav-item ${isActive ? 'sidebar__nav-item--active' : ''}`
   }
 >
 ```
@@ -237,7 +246,7 @@ El flujo es: usuario escribe -> onChange -> setState -> React re-renderiza -> in
 
 // Dentro de Modal:
 function Modal({ children }: { children: React.ReactNode }) {
-  return <div className={styles.body}>{children}</div>;
+  return <div className="modal__body">{children}</div>;
 }
 ```
 
@@ -299,17 +308,17 @@ interface UpdateTaskInput extends Partial<CreateTaskInput> {
 
 ---
 
-## Estilos: CSS Modules + Design Tokens
+## Estilos: CSS Global + BEM + Design Tokens
 
-### CSS Modules
+### BEM
 
 ```tsx
-import styles from './TaskCard.module.css';
-
-// Las clases son unicas por componente (no hay colisiones)
-<div className={styles.card}>          // se compila a "TaskCard_card_x7k2z"
-<div className={styles.cardTitle}>     // se compila a "TaskCard_cardTitle_a3b1c"
+<article className="task-card">
+  <h3 className="task-card__title">{task.name}</h3>
+</article>
 ```
+
+Se uso CSS global con nombres BEM (`task-card__title`, `task-card--dragging`) para mantener clases predecibles, evitar runtime extra y seguir cerca del design system.
 
 ### Variables CSS (Design Tokens)
 
@@ -324,7 +333,7 @@ import styles from './TaskCard.module.css';
 }
 
 /* Se usan en cualquier componente */
-.card {
+.task-card {
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   transition: transform var(--duration-fast) var(--ease-out);
@@ -338,7 +347,7 @@ import styles from './TaskCard.module.css';
 ### Stagger Animation en Cards
 
 ```css
-.card {
+.task-card {
   opacity: 0;
   animation: cardEnter 400ms var(--ease-out) forwards;
   animation-delay: var(--stagger-delay, 0ms);
@@ -356,7 +365,7 @@ import styles from './TaskCard.module.css';
 ```css
 /* Evita hover falsos en touch devices */
 @media (hover: hover) and (pointer: fine) {
-  .card:hover {
+  .task-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-card-hover);
   }
@@ -419,8 +428,8 @@ import styles from './TaskCard.module.css';
 5. Usuario clickea "Create Task"
 6. TaskForm llama onSubmit(data) -> callback al padre
 7. Dashboard: handleCreate llama useTasks.createTask(data)
-8. useTasks: setTasks(prev => [newTask, ...prev])
-9. React re-renderiza: la nueva tarea aparece en la columna
+8. useTasks ejecuta createTask mutation en la API
+9. Apollo/refetch actualiza la lista y React re-renderiza
 10. showToast('Task created', 'success')
 11. setShowCreateModal(false) -> modal se cierra
 ```
@@ -436,7 +445,7 @@ import styles from './TaskCard.module.css';
 6. TaskForm recibe initialData -> campos pre-llenados
 7. Usuario modifica y clickea "Update Task"
 8. Dashboard: handleUpdate -> useTasks.updateTask({id, ...data})
-9. useTasks: setTasks(prev => prev.map(t => t.id === id ? updated : t))
+9. useTasks ejecuta updateTask mutation y refetch
 10. Toast de exito, modal se cierra
 ```
 
@@ -448,7 +457,7 @@ import styles from './TaskCard.module.css';
 3. Dashboard: setDeletingTaskId(id) -> abre ConfirmDialog
 4. Usuario clickea "Delete" en el dialogo
 5. Dashboard: handleDelete -> useTasks.deleteTask(id)
-6. useTasks: setTasks(prev => prev.filter(t => t.id !== id))
+6. useTasks ejecuta deleteTask mutation y refetch
 7. Toast de exito, dialogo se cierra
 ```
 
@@ -459,11 +468,27 @@ import styles from './TaskCard.module.css';
 2. Dashboard: setSearchOpen(true) -> aparece SearchFilter
 3. Usuario escribe o selecciona filtros
 4. SearchFilter: onChange(newFilters) -> callback al padre
-5. Dashboard: setFilters(newFilters) via useTasks
-6. useTasks: filteredTasks = useMemo() filtra segun criterios
-7. Las columnas se re-renderizan solo con tareas que match
-8. Si 0 resultados: EmptyState se muestra
+5. SearchFilter actualiza FilterContext
+6. useTasks envia filtros soportados al query tasks
+7. DueDate se filtra client-side porque la API exige timestamp exacto
+8. Si 0 resultados: se muestra el estado vacio (`empty-results`)
 ```
+
+### Drag & Drop y Reordenamiento
+
+```
+1. TaskCard escribe task-id y task-status en dataTransfer al iniciar drag
+2. TaskColumn detecta si el cursor esta en la mitad superior o inferior de una card
+3. Se muestra una linea roja indicando si la tarea caera antes o despues
+4. Al soltar, TaskColumn calcula el nuevo orden de la columna
+5. Se generan updates con posiciones enteras (1, 2, 3...) para evitar errores de DB
+6. Dashboard aplica el cambio optimistamente para que la UI responda al instante
+7. useTasks ejecuta updateTask para las tareas afectadas y hace refetch al final
+8. Dashboard mantiene el estado optimista hasta que el backend confirma el mismo orden
+9. Si la API falla, se revierte al estado real y aparece un toast de error
+```
+
+Esto no era un requerimiento explicito como reorder dentro de la misma columna, pero se agrego porque el documento menciona editar `position` y porque hace que el Kanban se sienta completo.
 
 ---
 
@@ -474,10 +499,13 @@ import styles from './TaskCard.module.css';
 | React 19 | Libreria de UI |
 | TypeScript | Type safety |
 | Vite | Build tool + dev server |
+| Apollo Client | Cliente GraphQL, cache, loading/error states |
 | React Router | Routing SPA |
 | Lucide React | Iconos |
-| CSS Modules | Estilos scoped por componente |
+| CSS global + BEM | Estilos predecibles con bajo overhead |
 | CSS Custom Properties | Design tokens globales |
+| Vitest + Testing Library | Tests unitarios/de componentes |
+| Vercel | Deploy de produccion |
 
 ---
 
@@ -494,7 +522,13 @@ npm run dev
 npm run build
 
 # Type-check sin build
-npx tsc --noEmit
+npm run typecheck
+
+# Tests
+npm run test:run
+
+# Lint
+npm run lint
 ```
 
 ---
@@ -505,7 +539,7 @@ npx tsc --noEmit
 |---|---|---|
 | 1 | Folder structure | Hecho |
 | 1 | Routing (Dashboard, Settings, 404) | Hecho |
-| 1 | Styles solution (CSS Modules + tokens) | Hecho |
+| 1 | Styles solution (CSS global BEM + tokens) | Hecho |
 | 2 | Sidebar con logo y navegacion | Hecho |
 | 2 | Header con avatar y notificaciones | Hecho |
 | 2 | Columnas (Backlog, Todo, In Progress, Done, Cancelled) | Hecho |
@@ -528,3 +562,9 @@ npx tsc --noEmit
 | Bonus | Color coding de fechas (green/yellow/red) | Hecho |
 | Bonus | Conteo de tareas por columna | Hecho |
 | Bonus | Animaciones al agregar tareas | Hecho |
+| Bonus | Drag & drop entre columnas con update de status | Hecho |
+| Extra | Reordenar tareas dentro de la misma columna | Hecho |
+| Extra | Indicador visual de insercion durante drag | Hecho |
+| Extra | Updates optimistas al mover tareas | Hecho |
+| Extra | Fallback neutral para usuarios sin avatar valido | Hecho |
+| Extra | Deploy en Vercel | Hecho |
