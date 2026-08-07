@@ -956,7 +956,7 @@ fieldset.search-filter__group {
 .task-card__footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   margin-top: 2px;
 }
 
@@ -965,20 +965,6 @@ fieldset.search-filter__group {
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
-}
-
-.task-card__stats {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
-.task-card__stat {
-  display: flex;
-  align-items: center;
-  gap: 3px;
 }
 
 /* ===== MODAL ===== */
@@ -1605,22 +1591,6 @@ fieldset.search-filter__group {
   color: var(--color-primary);
 }
 
-.task-table__row-icons {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  margin-left: var(--spacing-sm);
-  flex-shrink: 0;
-}
-
-.task-table__row-icon {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 15px;
-  color: white;
-}
-
 .task-table__col-tags {
   display: flex;
   align-items: center;
@@ -2161,10 +2131,6 @@ fieldset.search-filter__group {
 
   .task-table__row-task-name {
     white-space: normal;
-  }
-
-  .task-table__row-icons {
-    display: none;
   }
 
   .task-table__assignee-avatar {

@@ -1,13 +1,5 @@
 import { memo, useState, useEffect, useRef } from 'react';
-import {
-  MoreHorizontal,
-  Clock,
-  Paperclip,
-  GitBranch,
-  MessageCircle,
-  Pencil,
-  Trash2,
-} from 'lucide-react';
+import { MoreHorizontal, Clock, Pencil, Trash2 } from 'lucide-react';
 import type { Task } from '../../types/task';
 import { formatDate, getDateColor, getPointLabel } from '../../utils/date';
 import { getTagLabel, getTagClassName } from '../../utils/tags';
@@ -152,18 +144,6 @@ export const TaskCard = memo(function TaskCard({
             title={task.assignee.fullName}
           />
         )}
-        {/* Decorative stat icons matching the Figma design (API doesn't provide these values) */}
-        <div className="task-card__stats">
-          <span className="task-card__stat">
-            <Paperclip size={14} />
-          </span>
-          <span className="task-card__stat">
-            <GitBranch size={14} />
-          </span>
-          <span className="task-card__stat">
-            <MessageCircle size={14} />
-          </span>
-        </div>
       </div>
     </article>
   );

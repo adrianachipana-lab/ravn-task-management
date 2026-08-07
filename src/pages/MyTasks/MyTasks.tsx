@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@apollo/client/react';
-import { Plus, ChevronDown, MessageCircle, GitBranch } from 'lucide-react';
+import { Plus, ChevronDown } from 'lucide-react';
 import { ViewToggle } from '../../components/ViewToggle';
 import { SearchFilter } from '../../components/SearchFilter';
 import { Modal } from '../../components/Modal';
@@ -164,16 +164,6 @@ export function MyTasks() {
                         <span className="task-table__row-task-name" title={task.name}>
                           {task.name}
                         </span>
-                        {task.tags.length > 0 && (
-                          <span className="task-table__row-icons">
-                            <span className="task-table__row-icon">
-                              <MessageCircle size={12} />
-                            </span>
-                            <span className="task-table__row-icon">
-                              <GitBranch size={12} />
-                            </span>
-                          </span>
-                        )}
                       </div>
                       <div className="task-table__col-tags">
                         {task.tags.length > 0 && (
