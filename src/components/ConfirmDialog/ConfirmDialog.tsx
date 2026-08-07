@@ -22,7 +22,12 @@ export function ConfirmDialog({
   variant = 'default',
 }: ConfirmDialogProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      overlayClassName="modal__overlay--centered"
+      dialogClassName="modal--confirm"
+    >
       <div className="confirm-dialog">
         <h2 className="confirm-dialog__title">{title}</h2>
         <p className="confirm-dialog__message">{message}</p>

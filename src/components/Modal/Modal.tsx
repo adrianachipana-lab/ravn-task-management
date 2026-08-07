@@ -4,12 +4,20 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  overlayClassName?: string;
+  dialogClassName?: string;
 }
 
 // Reusable modal dialog with overlay backdrop
 // Closes on Escape key or clicking outside the dialog
 // Locks body scroll while open to prevent background scrolling
-export function Modal({ isOpen, onClose, children }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  children,
+  overlayClassName,
+  dialogClassName,
+}: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   // Keep a ref to the latest onClose so the Escape listener doesn't go stale
   const onCloseRef = useRef(onClose);
@@ -47,13 +55,17 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
 
   return (
     <div
-      className="modal__overlay"
+      className={`modal__overlay${overlayClassName ? ` ${overlayClassName}` : ''}`}
       ref={overlayRef}
       onClick={handleOverlayClick}
       onKeyDown={handleOverlayKeyDown}
       role="presentation"
     >
-      <dialog className="modal" open aria-label="Task dialog">
+      <dialog
+        className={`modal${dialogClassName ? ` ${dialogClassName}` : ''}`}
+        open
+        aria-label="Task dialog"
+      >
         {children}
       </dialog>
     </div>

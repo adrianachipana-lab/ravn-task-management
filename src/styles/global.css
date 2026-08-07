@@ -994,6 +994,10 @@ fieldset.search-filter__group {
   position: static;
 }
 
+.modal--confirm {
+  max-width: 420px;
+}
+
 @keyframes overlay-in {
   from {
     opacity: 0;
@@ -2027,12 +2031,25 @@ fieldset.search-filter__group {
     align-items: flex-start;
   }
 
+  .modal__overlay--centered {
+    align-items: center;
+    padding: var(--spacing-md);
+  }
+
   .modal {
     width: 100%;
     max-width: 100%;
     max-height: 100vh;
     height: 100vh;
     animation: none;
+  }
+
+  .modal--confirm {
+    width: 100%;
+    max-width: 420px;
+    height: auto;
+    max-height: calc(100vh - 32px);
+    animation: modal-in var(--duration-slow) var(--ease-out);
   }
 
   .task-form {
