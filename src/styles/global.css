@@ -1242,9 +1242,11 @@ fieldset.search-filter__group {
 }
 
 .date-picker [data-rwp-highlight-wrapper] {
-  background: rgba(255, 255, 255, 0.08);
+  background: #000;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 1;
+  pointer-events: none;
 }
 
 /* Month column: left-aligned */
