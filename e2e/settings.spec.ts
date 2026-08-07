@@ -24,8 +24,9 @@ test.describe('Settings Page', () => {
   test('displays the actual user name from the API', async ({ page }) => {
     await page.waitForSelector('.settings__card', { timeout: 10000 });
 
-    // The profile should show a real name (not empty)
-    const nameValue = page.locator('.settings__row').first().locator('.settings__value');
+    const nameValue = page
+      .locator('.settings__row', { hasText: 'Full Name' })
+      .locator('.settings__value');
     const text = await nameValue.textContent();
     expect(text?.length).toBeGreaterThan(0);
   });

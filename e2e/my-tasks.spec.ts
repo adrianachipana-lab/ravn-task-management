@@ -10,7 +10,7 @@ test.describe('My Tasks (List View)', () => {
     const header = page.locator('.task-table__header');
     await expect(header).toBeVisible();
     await expect(header).toContainText('Task Name');
-    await expect(header).toContainText('Task Tags');
+    await expect(header).toContainText('Tags');
     await expect(header).toContainText('Estimate');
   });
 
@@ -37,9 +37,7 @@ test.describe('My Tasks (List View)', () => {
   });
 
   test('clicking a task row opens the edit modal', async ({ page }) => {
-    // Click on the task name area to avoid hitting the tag popup button
-    const taskName = page.locator('.task-table__row-task-name').first();
-    await taskName.click();
+    await page.locator('.task-table__row-action').first().click();
     await expect(page.locator('.modal')).toBeVisible();
     await expect(page.locator('.task-form__title-input')).toBeVisible();
   });

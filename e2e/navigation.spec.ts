@@ -20,6 +20,13 @@ test.describe('Navigation', () => {
     await expect(page.locator('.board')).toBeVisible();
   });
 
+  test('navigates back to Dashboard by clicking the sidebar logo', async ({ page }) => {
+    await page.goto('/my-tasks');
+    await page.getByLabel('Go to dashboard').click();
+    await expect(page).toHaveURL('/');
+    await expect(page.locator('.board')).toBeVisible();
+  });
+
   test('navigates to Settings via URL', async ({ page }) => {
     await page.goto('/settings');
     await expect(page.locator('.settings__title')).toHaveText('Settings');

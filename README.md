@@ -71,6 +71,9 @@ npm run build
 # Run tests
 npm run test:run
 
+# Run Playwright end-to-end tests
+npm run test:e2e
+
 # Type checking
 npm run typecheck
 
@@ -96,6 +99,7 @@ npm run lint
 ## Project Structure
 
 ```
+e2e/                    # Playwright browser tests for main user flows
 src/
 ├── components/          # Reusable UI components
 │   ├── BottomNav/       # Mobile bottom navigation
@@ -176,6 +180,23 @@ src/
 - [x] **Click-outside to close** — Menus, dropdowns, and modals close when clicking outside.
 - [x] **Keyboard support** — Escape key closes modals, accessible labels on all interactive elements.
 - [x] **React Doctor 100/100** — Zero warnings for performance, accessibility, security, and maintainability.
+
+## Testing
+
+The project includes both unit tests and Playwright end-to-end tests.
+
+```bash
+# Unit/component tests with Vitest
+npm run test:run
+
+# Browser tests with Playwright
+npm run test:e2e
+
+# Interactive Playwright runner
+npm run test:e2e:ui
+```
+
+Playwright tests cover the main browser flows: dashboard rendering, routing, sidebar logo navigation, My Tasks list interactions, profile popover, notification center, filters, modals, and settings profile data. Lower-level behavior such as drag-and-drop reorder calculations, notification message formatting, avatar fallback, filters, dates, and modal behavior is covered with Vitest unit/component tests.
 
 ## API
 
