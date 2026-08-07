@@ -15,14 +15,7 @@ export function CreateTaskProvider({ children }: { children: ReactNode }) {
     onCreateRef.current = fn;
   }, []);
 
-  const value = useMemo(
-    () => ({ requestCreate, setOnCreate }),
-    [requestCreate, setOnCreate],
-  );
+  const value = useMemo(() => ({ requestCreate, setOnCreate }), [requestCreate, setOnCreate]);
 
-  return (
-    <CreateTaskContext.Provider value={value}>
-      {children}
-    </CreateTaskContext.Provider>
-  );
+  return <CreateTaskContext.Provider value={value}>{children}</CreateTaskContext.Provider>;
 }

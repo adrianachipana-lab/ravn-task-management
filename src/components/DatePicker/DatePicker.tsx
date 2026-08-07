@@ -3,8 +3,18 @@ import { WheelPicker } from '@ncdai/react-wheel-picker';
 import '@ncdai/react-wheel-picker/style.css';
 
 const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 function getDaysInMonth(month: number, year: number): string[] {
@@ -50,47 +60,53 @@ export function DatePicker({ value, onChange }: DatePickerProps) {
     return getDaysInMonth(monthIndex, year);
   }, [pickerValue.month, pickerValue.year]);
 
-  const monthOptions = useMemo(() =>
-    MONTHS.map((m) => ({ value: m, label: m })),
-  []);
+  const monthOptions = useMemo(() => MONTHS.map((m) => ({ value: m, label: m })), []);
 
-  const dayOptions = useMemo(() =>
-    days.map((d) => ({ value: d, label: d })),
-  [days]);
+  const dayOptions = useMemo(() => days.map((d) => ({ value: d, label: d })), [days]);
 
-  const yearOptions = useMemo(() =>
-    years.map((y) => ({ value: y, label: y })),
-  [years]);
+  const yearOptions = useMemo(() => years.map((y) => ({ value: y, label: y })), [years]);
 
-  const emitChange = useCallback((updated: typeof parsed) => {
-    const m = String(MONTHS.indexOf(updated.month) + 1).padStart(2, '0');
-    onChange(`${updated.year}-${m}-${updated.day}`);
-  }, [onChange]);
+  const emitChange = useCallback(
+    (updated: typeof parsed) => {
+      const m = String(MONTHS.indexOf(updated.month) + 1).padStart(2, '0');
+      onChange(`${updated.year}-${m}-${updated.day}`);
+    },
+    [onChange],
+  );
 
-  const handleMonthChange = useCallback((val: string) => {
-    const monthIndex = MONTHS.indexOf(val);
-    const year = Number(pickerValue.year);
-    const maxDay = new Date(year, monthIndex + 1, 0).getDate();
-    const day = String(Math.min(Number(pickerValue.day), maxDay)).padStart(2, '0');
-    const updated = { month: val, day, year: pickerValue.year };
-    setPickerValue(updated);
-    emitChange(updated);
-  }, [pickerValue, emitChange]);
+  const handleMonthChange = useCallback(
+    (val: string) => {
+      const monthIndex = MONTHS.indexOf(val);
+      const year = Number(pickerValue.year);
+      const maxDay = new Date(year, monthIndex + 1, 0).getDate();
+      const day = String(Math.min(Number(pickerValue.day), maxDay)).padStart(2, '0');
+      const updated = { month: val, day, year: pickerValue.year };
+      setPickerValue(updated);
+      emitChange(updated);
+    },
+    [pickerValue, emitChange],
+  );
 
-  const handleDayChange = useCallback((val: string) => {
-    const updated = { ...pickerValue, day: val };
-    setPickerValue(updated);
-    emitChange(updated);
-  }, [pickerValue, emitChange]);
+  const handleDayChange = useCallback(
+    (val: string) => {
+      const updated = { ...pickerValue, day: val };
+      setPickerValue(updated);
+      emitChange(updated);
+    },
+    [pickerValue, emitChange],
+  );
 
-  const handleYearChange = useCallback((val: string) => {
-    const monthIndex = MONTHS.indexOf(pickerValue.month);
-    const maxDay = new Date(Number(val), monthIndex + 1, 0).getDate();
-    const day = String(Math.min(Number(pickerValue.day), maxDay)).padStart(2, '0');
-    const updated = { month: pickerValue.month, day, year: val };
-    setPickerValue(updated);
-    emitChange(updated);
-  }, [pickerValue, emitChange]);
+  const handleYearChange = useCallback(
+    (val: string) => {
+      const monthIndex = MONTHS.indexOf(pickerValue.month);
+      const maxDay = new Date(Number(val), monthIndex + 1, 0).getDate();
+      const day = String(Math.min(Number(pickerValue.day), maxDay)).padStart(2, '0');
+      const updated = { month: pickerValue.month, day, year: val };
+      setPickerValue(updated);
+      emitChange(updated);
+    },
+    [pickerValue, emitChange],
+  );
 
   return (
     <div className="date-picker">

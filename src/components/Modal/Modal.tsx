@@ -42,7 +42,7 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
   };
 
   const handleOverlayKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') onClose();
+    if (e.target === overlayRef.current && (e.key === 'Enter' || e.key === ' ')) onClose();
   };
 
   return (

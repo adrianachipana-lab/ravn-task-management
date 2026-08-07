@@ -31,7 +31,7 @@ export function Settings() {
       <div className="settings__card">
         <div className="settings__row">
           <span className="settings__label">Avatar</span>
-          <img className="settings__avatar" src={getAvatarUrl(user.avatar, user.fullName)} alt={user.fullName} />
+          <img className="settings__avatar" src={getAvatarUrl(user.avatar)} alt={user.fullName} />
         </div>
         <div className="settings__row">
           <span className="settings__label">Full Name</span>

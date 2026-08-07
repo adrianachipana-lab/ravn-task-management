@@ -1,31 +1,62 @@
-// Format a date string into a human-readable label (e.g. "TODAY", "YESTERDAY", "JULY 20, 2026")
+import { TASK_POINT_LABELS } from '../constants/taskOptions';
+
+const DAY_IN_MS = 1000 * 60 * 60 * 24;
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getDayDifference(dateString: string): number {
+  const today = startOfDay(new Date());
+  const target = startOfDay(new Date(dateString));
+  return Math.round((target.getTime() - today.getTime()) / DAY_IN_MS);
+}
+
+function formatLongDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = getDayDifference(dateString);
 
   if (diffDays === 0) return 'TODAY';
   if (diffDays === -1) return 'YESTERDAY';
 
-  return date.toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).toUpperCase();
+  return formatLongDate(dateString).toUpperCase();
+}
+
+export function formatListDate(dateString: string): string {
+  const diffDays = getDayDifference(dateString);
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === -1) return 'Yesterday';
+
+  return formatLongDate(dateString);
+}
+
+export function formatDateInputValue(dateString: string): string {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function formatFormDateLabel(dateString: string): string {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export type DateColor = 'green' | 'yellow' | 'red' | 'default';
 
-// Determine the color indicator for a due date:
-// red = overdue, yellow = due within 2 days, green = on time, default = today
 export function getDateColor(dateString: string): DateColor {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dueDate = new Date(dateString);
-  const target = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-  const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = getDayDifference(dateString);
 
   if (diffDays < 0) return 'red';
   if (diffDays === 0) return 'default';
@@ -33,14 +64,13 @@ export function getDateColor(dateString: string): DateColor {
   return 'green';
 }
 
-// Convert a point estimate enum value (e.g. "FOUR") into a display string ("4 Points")
+export function getListDateClassName(dateColor: DateColor): string {
+  if (dateColor === 'red') return 'task-table__col-date--red';
+  if (dateColor === 'yellow') return 'task-table__col-date--yellow';
+  if (dateColor === 'green') return 'task-table__col-date--green';
+  return '';
+}
+
 export function getPointLabel(pointEstimate: string): string {
-  const map: Record<string, string> = {
-    ZERO: '0 Points',
-    ONE: '1 Points',
-    TWO: '2 Points',
-    FOUR: '4 Points',
-    EIGHT: '8 Points',
-  };
-  return map[pointEstimate] ?? pointEstimate;
+  return TASK_POINT_LABELS[pointEstimate] ?? pointEstimate;
 }

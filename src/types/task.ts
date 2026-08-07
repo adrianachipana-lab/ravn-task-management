@@ -66,7 +66,7 @@ export interface UpdateTaskInput extends Partial<CreateTaskInput> {
 export type FilterInput = {
   name?: string;
   dueDate?: string;
-  ownerId?: string;
+  assigneeId?: string;
   status?: TaskStatus;
   tags?: TaskTag[];
   pointEstimate?: string;

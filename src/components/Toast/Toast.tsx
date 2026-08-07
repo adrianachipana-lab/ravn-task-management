@@ -1,8 +1,8 @@
 import { X } from 'lucide-react';
-import type { Toast as ToastType } from '../../hooks/useToast';
+import type { AppNotification } from '../../context/notificationContextValue';
 
 interface ToastContainerProps {
-  toasts: ToastType[];
+  toasts: AppNotification[];
   onRemove: (id: string) => void;
 }
 
@@ -16,7 +16,12 @@ export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
       {toasts.map((toast) => (
         <div key={toast.id} className={`toast toast--${toast.type}`}>
           <span>{toast.message}</span>
-          <button type="button" className="toast__close" onClick={() => onRemove(toast.id)} aria-label="Dismiss">
+          <button
+            type="button"
+            className="toast__close"
+            onClick={() => onRemove(toast.id)}
+            aria-label="Dismiss"
+          >
             <X size={14} />
           </button>
         </div>

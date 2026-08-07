@@ -8,7 +8,7 @@ describe('Modal', () => {
     render(
       <Modal isOpen onClose={vi.fn()}>
         <p>Modal content</p>
-      </Modal>
+      </Modal>,
     );
     expect(screen.getByText('Modal content')).toBeInTheDocument();
   });
@@ -17,7 +17,7 @@ describe('Modal', () => {
     render(
       <Modal isOpen={false} onClose={vi.fn()}>
         <p>Hidden content</p>
-      </Modal>
+      </Modal>,
     );
     expect(screen.queryByText('Hidden content')).not.toBeInTheDocument();
   });
@@ -28,7 +28,7 @@ describe('Modal', () => {
     render(
       <Modal isOpen onClose={onClose}>
         <p>Content</p>
-      </Modal>
+      </Modal>,
     );
 
     await user.keyboard('{Escape}');
@@ -41,7 +41,7 @@ describe('Modal', () => {
     const { container } = render(
       <Modal isOpen onClose={onClose}>
         <p>Content</p>
-      </Modal>
+      </Modal>,
     );
 
     // Click on the overlay (not the dialog content)
@@ -56,7 +56,7 @@ describe('Modal', () => {
     render(
       <Modal isOpen onClose={onClose}>
         <p>Click me</p>
-      </Modal>
+      </Modal>,
     );
 
     await user.click(screen.getByText('Click me'));
@@ -67,7 +67,7 @@ describe('Modal', () => {
     render(
       <Modal isOpen onClose={vi.fn()}>
         <p>Content</p>
-      </Modal>
+      </Modal>,
     );
     expect(document.body.style.overflow).toBe('hidden');
   });
@@ -76,14 +76,14 @@ describe('Modal', () => {
     const { rerender } = render(
       <Modal isOpen onClose={vi.fn()}>
         <p>Content</p>
-      </Modal>
+      </Modal>,
     );
     expect(document.body.style.overflow).toBe('hidden');
 
     rerender(
       <Modal isOpen={false} onClose={vi.fn()}>
         <p>Content</p>
-      </Modal>
+      </Modal>,
     );
     expect(document.body.style.overflow).toBe('');
   });
@@ -92,7 +92,7 @@ describe('Modal', () => {
     render(
       <Modal isOpen onClose={vi.fn()}>
         <p>Content</p>
-      </Modal>
+      </Modal>,
     );
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-label', 'Task dialog');
   });

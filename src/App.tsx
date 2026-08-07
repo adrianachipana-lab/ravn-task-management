@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ApolloProvider } from '@apollo/client/react';
 import { client } from './graphql/client';
@@ -8,81 +8,66 @@ import { BottomNav } from './components/BottomNav';
 import { MobileTabs } from './components/MobileTabs';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingSpinner } from './components/LoadingSpinner';
+import { ToastContainer } from './components/Toast';
 import { CreateTaskProvider } from './context/CreateTaskContext';
-import { FilterProvider, useFilters } from './context/FilterContext';
+import { FilterProvider } from './context/FilterContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { useCreateTask } from './hooks/useCreateTask';
+import { useFilters } from './hooks/useFilters';
+import { useNotifications } from './hooks/useNotifications';
+import { ROUTES } from './constants/navigation';
 import './styles/global.css';
 
-// Lazy-load pages so they're only fetched when the user navigates to them
-// This reduces the initial bundle size and improves first-load performance
-const Dashboard = lazy(() =>
-  import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })),
-);
-const MyTasks = lazy(() =>
-  import('./pages/MyTasks').then((m) => ({ default: m.MyTasks })),
-);
-const Settings = lazy(() =>
-  import('./pages/Settings').then((m) => ({ default: m.Settings })),
-);
-const NotFound = lazy(() =>
-  import('./pages/NotFound').then((m) => ({ default: m.NotFound })),
-);
+const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
+const MyTasks = lazy(() => import('./pages/MyTasks').then((m) => ({ default: m.MyTasks })));
+const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
+const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })));
 
-// AppShell renders the persistent layout (sidebar, header, bottom nav)
-// and the routed page content inside a Suspense boundary
 function AppShell() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { requestCreate } = useCreateTask();
   const { filters, setFilters } = useFilters();
+  const { toasts, removeToast } = useNotifications();
 
-  // Update the name filter in real time as the user types in the search bar
   const handleSearchChange = (value: string) => {
     setFilters({ ...filters, name: value || undefined });
   };
 
   return (
     <div className="app-layout">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar />
       <div className="app-layout__main">
-        <Header
-          onMenuClick={() => setSidebarOpen(true)}
-          searchValue={filters.name ?? ''}
-          onSearchChange={handleSearchChange}
-        />
+        <Header searchValue={filters.name ?? ''} onSearchChange={handleSearchChange} />
         <MobileTabs />
         <main className="app-layout__content">
           <ErrorBoundary>
             <Suspense fallback={<LoadingSpinner />}>
               <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/my-tasks" element={<MyTasks />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path={ROUTES.dashboard} element={<Dashboard />} />
+                <Route path={ROUTES.myTasks} element={<MyTasks />} />
+                <Route path={ROUTES.settings} element={<Settings />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
         </main>
         <BottomNav onAddClick={requestCreate} />
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
       </div>
     </div>
   );
 }
 
-// Root component: wraps the app with global providers
-// - ErrorBoundary: catches runtime errors and shows a fallback UI
-// - ApolloProvider: makes the GraphQL client available to all components
-// - BrowserRouter: enables client-side routing
-// - FilterProvider: shares filter state across all pages
-// - CreateTaskProvider: lets any component trigger the "create task" modal
 export default function App() {
   return (
     <ErrorBoundary>
       <ApolloProvider client={client}>
         <BrowserRouter>
           <FilterProvider>
-            <CreateTaskProvider>
-              <AppShell />
-            </CreateTaskProvider>
+            <NotificationProvider>
+              <CreateTaskProvider>
+                <AppShell />
+              </CreateTaskProvider>
+            </NotificationProvider>
           </FilterProvider>
         </BrowserRouter>
       </ApolloProvider>

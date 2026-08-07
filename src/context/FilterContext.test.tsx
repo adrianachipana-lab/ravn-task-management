@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { FilterProvider, useFilters } from './FilterContext';
+import { FilterProvider } from './FilterContext';
+import { useFilters } from '../hooks/useFilters';
 import type { ReactNode } from 'react';
 
 // Wrapper that provides the FilterContext

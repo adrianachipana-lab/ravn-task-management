@@ -1,40 +1,41 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, PlusCircle, ClipboardList } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
+import { MAIN_NAV_ITEMS } from '../../constants/navigation';
 
 interface BottomNavProps {
   onAddClick: () => void;
 }
 
-// Mobile-only bottom navigation bar with Dashboard, Add, and My Task buttons
-// Only visible on small screens (hidden via CSS on desktop)
+type MainNavItem = (typeof MAIN_NAV_ITEMS)[number];
+
+const [primaryNavItem, secondaryNavItem] = MAIN_NAV_ITEMS;
+
+function BottomNavLink({ item }: { item: MainNavItem }) {
+  const Icon = item.bottomIcon ?? item.icon;
+
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      className={({ isActive }) => `bottom-nav__item${isActive ? ' bottom-nav__item--active' : ''}`}
+    >
+      <Icon size={20} />
+      <span>{item.bottomLabel}</span>
+    </NavLink>
+  );
+}
+
 export function BottomNav({ onAddClick }: BottomNavProps) {
   return (
     <nav className="bottom-nav">
-      <NavLink
-        to="/"
-        end
-        className={({ isActive }) =>
-          `bottom-nav__item${isActive ? ' bottom-nav__item--active' : ''}`
-        }
-      >
-        <LayoutGrid size={20} />
-        <span>Dashboard</span>
-      </NavLink>
+      <BottomNavLink item={primaryNavItem} />
 
       <button type="button" className="bottom-nav__add" onClick={onAddClick}>
         <PlusCircle size={28} />
         <span>Add Project</span>
       </button>
 
-      <NavLink
-        to="/my-tasks"
-        className={({ isActive }) =>
-          `bottom-nav__item${isActive ? ' bottom-nav__item--active' : ''}`
-        }
-      >
-        <ClipboardList size={20} />
-        <span>My Task</span>
-      </NavLink>
+      <BottomNavLink item={secondaryNavItem} />
     </nav>
   );
 }

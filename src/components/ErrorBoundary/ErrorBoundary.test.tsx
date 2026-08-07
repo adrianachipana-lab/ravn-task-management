@@ -10,15 +10,19 @@ function ThrowingComponent() {
 
 // Suppress console.error from ErrorBoundary during tests
 const originalError = console.error;
-beforeEach(() => { console.error = vi.fn(); });
-afterEach(() => { console.error = originalError; });
+beforeEach(() => {
+  console.error = vi.fn();
+});
+afterEach(() => {
+  console.error = originalError;
+});
 
 describe('ErrorBoundary', () => {
   it('renders children when there is no error', () => {
     render(
       <ErrorBoundary>
         <p>Hello</p>
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
     expect(screen.getByText('Hello')).toBeInTheDocument();
   });
@@ -27,7 +31,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <ThrowingComponent />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
     expect(screen.getByText('Test error')).toBeInTheDocument();
@@ -45,7 +49,7 @@ describe('ErrorBoundary', () => {
     const { rerender } = render(
       <ErrorBoundary>
         <MaybeThrow />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
@@ -57,7 +61,7 @@ describe('ErrorBoundary', () => {
     rerender(
       <ErrorBoundary>
         <MaybeThrow />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
     expect(screen.getByText('Recovered')).toBeInTheDocument();
   });

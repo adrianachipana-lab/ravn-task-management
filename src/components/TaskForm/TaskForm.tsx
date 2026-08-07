@@ -1,52 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { LayoutGrid, User, Tag, Calendar } from 'lucide-react';
-import type { Task, CreateTaskInput } from '../../types/task';
-import type { User as UserType } from '../../types/task';
+import type { Task, CreateTaskInput, TaskTag, User as UserType } from '../../types/task';
 import { DatePicker } from '../DatePicker';
-import { TaskStatus, TaskTag } from '../../types/task';
+import { TaskStatus } from '../../types/task';
 import { GET_USERS } from '../../graphql/queries';
 import { getAvatarUrl } from '../../utils/avatar';
+import { formatDateInputValue, formatFormDateLabel } from '../../utils/date';
+import { getTagLabel } from '../../utils/tags';
+import { TASK_POINT_OPTIONS, TASK_TAG_OPTIONS } from '../../constants/taskOptions';
 
-// Props for the task form
-// If initialData is provided, the form works in "edit" mode; otherwise it's "create" mode
 interface TaskFormProps {
   initialData?: Task;
   onSubmit: (data: CreateTaskInput) => void;
   onCancel: () => void;
 }
 
-const POINT_OPTIONS = [
-  { value: 'ZERO', label: '0 Points' },
-  { value: 'ONE', label: '1 Points' },
-  { value: 'TWO', label: '2 Points' },
-  { value: 'FOUR', label: '4 Points' },
-  { value: 'EIGHT', label: '8 Points' },
-];
-
-const TAG_OPTIONS = [
-  { value: TaskTag.IOS, label: 'IOS' },
-  { value: TaskTag.ANDROID, label: 'ANDROID' },
-  { value: TaskTag.REACT, label: 'REACT' },
-  { value: TaskTag.NODE_JS, label: 'NODE JS' },
-  { value: TaskTag.RAILS, label: 'RAILS' },
-];
-
-// Tracks which dropdown is currently open (only one at a time)
 type DropdownType = 'estimate' | 'assignee' | 'label' | 'dueDate' | null;
 
-// Convert "2026-07-20" into "Jul 20, 2026" for the chip display
-function formatDisplayDate(dateStr: string): string {
-  if (!dateStr) return '';
-  const [y, m, day] = dateStr.split('-').map(Number);
-  const d = new Date(y, m - 1, day);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-// Form used for both creating and editing tasks
-// Uses chip-style dropdowns for estimate, assignee, tags, and due date
 export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
-  // Fetch real users from the API for the assignee dropdown
   const { data: usersData } = useQuery<{ users: UserType[] }>(GET_USERS);
   const users = usersData?.users ?? [];
 
@@ -56,17 +28,14 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
   const [tags, setTags] = useState<TaskTag[]>(initialData?.tags ?? []);
   const [dueDate, setDueDate] = useState(() => {
     if (!initialData?.dueDate) return '';
-    const d = new Date(initialData.dueDate);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    return formatDateInputValue(initialData.dueDate);
   });
   const [openDropdown, setOpenDropdown] = useState<DropdownType>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
 
   const selectedAssignee = users.find((u) => u.id === assigneeId);
-  const selectedPointLabel = POINT_OPTIONS.find((p) => p.value === pointEstimate)?.label;
+  const selectedPointLabel = TASK_POINT_OPTIONS.find((p) => p.value === pointEstimate)?.label;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -78,12 +47,25 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const titleInput = titleRef.current;
+    if (!titleInput) return;
+    titleInput.style.height = 'auto';
+    titleInput.style.height = `${Math.min(titleInput.scrollHeight, 180)}px`;
+  }, [name]);
+
   const toggleDropdown = (type: DropdownType) => {
     setOpenDropdown((prev) => (prev === type ? null : type));
   };
 
   const handleTagToggle = (tag: TaskTag) => {
-    setTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
+    setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setName(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 180)}px`;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -101,17 +83,17 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
 
   return (
     <form className="task-form" ref={formRef} onSubmit={handleSubmit}>
-      <input
+      <textarea
+        ref={titleRef}
         className="task-form__title-input"
-        type="text"
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={handleNameChange}
         placeholder="Task Title"
         aria-label="Task title"
+        rows={1}
       />
 
       <div className="task-form__chips">
-        {/* Estimate */}
         <div className="task-form__chip-wrapper">
           <button
             type="button"
@@ -124,12 +106,15 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
           {openDropdown === 'estimate' && (
             <div className="task-form__dropdown">
               <div className="task-form__dropdown-header">Estimate</div>
-              {POINT_OPTIONS.map((opt) => (
+              {TASK_POINT_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   className={`task-form__dropdown-item${pointEstimate === opt.value ? ' task-form__dropdown-item--active' : ''}`}
-                  onClick={() => { setPointEstimate(opt.value); setOpenDropdown(null); }}
+                  onClick={() => {
+                    setPointEstimate(opt.value);
+                    setOpenDropdown(null);
+                  }}
                 >
                   <LayoutGrid size={14} /> {opt.label}
                 </button>
@@ -138,7 +123,6 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
           )}
         </div>
 
-        {/* Assignee */}
         <div className="task-form__chip-wrapper">
           <button
             type="button"
@@ -147,11 +131,17 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
           >
             {selectedAssignee ? (
               <>
-                <img className="task-form__chip-avatar" src={getAvatarUrl(selectedAssignee.avatar, selectedAssignee.fullName)} alt={selectedAssignee.fullName} />
+                <img
+                  className="task-form__chip-avatar"
+                  src={getAvatarUrl(selectedAssignee.avatar)}
+                  alt={selectedAssignee.fullName}
+                />
                 {selectedAssignee.fullName}
               </>
             ) : (
-              <><User size={14} /> Assignee</>
+              <>
+                <User size={14} /> Assignee
+              </>
             )}
           </button>
           {openDropdown === 'assignee' && (
@@ -162,9 +152,16 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
                   key={user.id}
                   type="button"
                   className={`task-form__dropdown-item${assigneeId === user.id ? ' task-form__dropdown-item--active' : ''}`}
-                  onClick={() => { setAssigneeId(user.id); setOpenDropdown(null); }}
+                  onClick={() => {
+                    setAssigneeId(user.id);
+                    setOpenDropdown(null);
+                  }}
                 >
-                  <img className="task-form__dropdown-avatar" src={getAvatarUrl(user.avatar, user.fullName)} alt={user.fullName} />
+                  <img
+                    className="task-form__dropdown-avatar"
+                    src={getAvatarUrl(user.avatar)}
+                    alt={user.fullName}
+                  />
                   {user.fullName}
                 </button>
               ))}
@@ -172,7 +169,6 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
           )}
         </div>
 
-        {/* Label */}
         <div className="task-form__chip-wrapper">
           <button
             type="button"
@@ -180,14 +176,12 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
             onClick={() => toggleDropdown('label')}
           >
             <Tag size={14} />
-            {tags.length > 0
-              ? tags.map((t) => TAG_OPTIONS.find((o) => o.value === t)?.label).join(', ')
-              : 'Label'}
+            {tags.length > 0 ? tags.map(getTagLabel).join(', ') : 'Label'}
           </button>
           {openDropdown === 'label' && (
             <div className="task-form__dropdown">
               <div className="task-form__dropdown-header">Tag Title</div>
-              {TAG_OPTIONS.map((opt) => (
+              {TASK_TAG_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
@@ -201,7 +195,6 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
           )}
         </div>
 
-        {/* Due date */}
         <div className="task-form__chip-wrapper">
           <button
             type="button"
@@ -209,11 +202,10 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
             onClick={() => toggleDropdown('dueDate')}
           >
             <Calendar size={14} />
-            {dueDate ? formatDisplayDate(dueDate) : 'Due date'}
+            {dueDate ? formatFormDateLabel(dueDate) : 'Due date'}
           </button>
           {openDropdown === 'dueDate' && (
             <div className="task-form__dropdown task-form__dropdown--date">
-              {/* Scroll-wheel picker for mobile, standard input for desktop */}
               <div className="task-form__date-picker-mobile">
                 <DatePicker value={dueDate} onChange={(v) => setDueDate(v)} />
                 <button
@@ -229,7 +221,10 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
                 className="task-form__date-input"
                 aria-label="Due date"
                 value={dueDate}
-                onChange={(e) => { setDueDate(e.target.value); setOpenDropdown(null); }}
+                onChange={(e) => {
+                  setDueDate(e.target.value);
+                  setOpenDropdown(null);
+                }}
               />
             </div>
           )}
@@ -237,7 +232,9 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
       </div>
 
       <div className="task-form__actions">
-        <button type="button" className="task-form__cancel-btn" onClick={onCancel}>Cancel</button>
+        <button type="button" className="task-form__cancel-btn" onClick={onCancel}>
+          Cancel
+        </button>
         <button type="submit" className="task-form__submit-btn">
           {initialData ? 'Update' : 'Create'}
         </button>

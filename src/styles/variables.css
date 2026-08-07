@@ -1,13 +1,13 @@
 :root {
   /* Colors - Primary */
-  --color-primary: #DA584B;
+  --color-primary: #da584b;
   --color-primary-hover: #c44a3f;
   --color-primary-subtle: rgba(218, 88, 75, 0.12);
 
   /* Colors - Background */
   --color-bg-page: #222528;
-  --color-bg-sidebar: #2C2F33;
-  --color-bg-card: #2C2F33;
+  --color-bg-sidebar: #2c2f33;
+  --color-bg-card: #2c2f33;
   --color-bg-hover: #363a3f;
 
   /* Colors - Text */
@@ -18,15 +18,15 @@
   /* Colors - Status */
   --color-success: #70b252;
   --color-warning: #e5b454;
-  --color-error: #DA584B;
+  --color-error: #da584b;
 
   /* Colors - Tags */
   --color-tag-react: rgba(97, 218, 251, 0.1);
   --color-tag-react-text: #61dafb;
-  --color-tag-android: #E5B4541A;
-  --color-tag-android-text: #E5B454;
-  --color-tag-ios: #70B2521A;
-  --color-tag-ios-text: #70B252;
+  --color-tag-android: #e5b4541a;
+  --color-tag-android-text: #e5b454;
+  --color-tag-ios: #70b2521a;
+  --color-tag-ios-text: #70b252;
   --color-tag-nodejs: rgba(104, 159, 56, 0.1);
   --color-tag-nodejs-text: #689f38;
   --color-tag-rails: rgba(204, 52, 45, 0.1);
@@ -63,8 +63,8 @@
   --duration-slow: 300ms;
 
   /* Font */
-  --font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    Roboto, sans-serif;
+  --font-family:
+    'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* Sidebar */
   --sidebar-width: 232px;

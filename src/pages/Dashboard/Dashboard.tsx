@@ -1,27 +1,21 @@
 import { useEffect, useState } from 'react';
+import { useQuery } from '@apollo/client/react';
 import { Plus } from 'lucide-react';
 import { ViewToggle } from '../../components/ViewToggle';
-import { SearchFilter } from '../../components/SearchFilter/SearchFilter';
-import { useFilters } from '../../context/FilterContext';
+import { SearchFilter } from '../../components/SearchFilter';
+import { useFilters } from '../../hooks/useFilters';
 import { TaskColumn } from '../../components/TaskColumn';
 import { Modal } from '../../components/Modal';
 import { TaskForm } from '../../components/TaskForm';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { ToastContainer } from '../../components/Toast';
 import { useTasks } from '../../hooks/useTasks';
-import { useToast } from '../../hooks/useToast';
+import { useNotifications } from '../../hooks/useNotifications';
 import { useCreateTask } from '../../hooks/useCreateTask';
-import type { Task, CreateTaskInput } from '../../types/task';
-import { TaskStatus } from '../../types/task';
-
-// Column order for the Kanban board
-const COLUMNS = [
-  TaskStatus.BACKLOG,
-  TaskStatus.TODO,
-  TaskStatus.IN_PROGRESS,
-  TaskStatus.DONE,
-  TaskStatus.CANCELLED,
-];
+import type { Task, CreateTaskInput, TaskStatus, User } from '../../types/task';
+import { TASK_STATUS_LABELS, TASK_STATUS_VALUES } from '../../constants/taskOptions';
+import { hasActiveFilters } from '../../utils/filters';
+import { GET_USERS } from '../../graphql/queries';
+import { buildTaskUpdateNotification } from '../../utils/notifications';
 
 type TaskMoveUpdate = { id: string; status: TaskStatus; position: number };
 
@@ -39,12 +33,11 @@ function hasAppliedTaskMoveUpdates(tasks: Task[], updates: TaskMoveUpdate[]) {
   });
 }
 
-// Main dashboard page: displays tasks in a Kanban board layout
-// Handles creating, editing, deleting tasks, and drag-and-drop between columns
 export function Dashboard() {
   const { tasks, loading, error, createTask, updateTask, updateTasks, deleteTask } = useTasks();
+  const { data: usersData } = useQuery<{ users: User[] }>(GET_USERS);
   const { filters, clearFilters } = useFilters();
-  const { toasts, showToast, removeToast } = useToast();
+  const { showNotification } = useNotifications();
 
   const { setOnCreate } = useCreateTask();
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -60,17 +53,19 @@ export function Dashboard() {
     }
   }, [pendingMoveUpdates, tasks]);
 
-  setOnCreate(() => setShowCreateForm(true));
+  useEffect(() => {
+    setOnCreate(() => setShowCreateForm(true));
+    return () => setOnCreate(() => {});
+  }, [setOnCreate]);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
-  // CRUD handlers — each shows a toast notification on success or failure
   const handleCreate = async (input: CreateTaskInput) => {
     const result = await createTask(input);
     if (result.success) {
-      showToast('Task created successfully', 'success');
+      showNotification(`Task "${input.name}" was created successfully`, 'success');
       setShowCreateForm(false);
     } else {
-      showToast(result.error ?? 'Failed to create task', 'error');
+      showNotification(result.error ?? 'Failed to create task', 'error');
     }
   };
 
@@ -78,36 +73,49 @@ export function Dashboard() {
     if (!editingTask) return;
     const result = await updateTask({ id: editingTask.id, ...input });
     if (result.success) {
-      showToast('Task updated successfully', 'success');
+      showNotification(
+        buildTaskUpdateNotification(editingTask, input, usersData?.users ?? []),
+        'success',
+      );
       setEditingTask(null);
     } else {
-      showToast(result.error ?? 'Failed to update task', 'error');
+      showNotification(result.error ?? 'Failed to update task', 'error');
     }
   };
 
-  const handleMoveTasks = async (updates: TaskMoveUpdate[]) => {
+  const handleMoveTasks = async (updates: TaskMoveUpdate[], movedTaskId: string) => {
     if (updates.length === 0) return;
     setOptimisticTasks(applyTaskMoveUpdates(visibleTasks, updates));
     setPendingMoveUpdates(updates);
 
     const result = await updateTasks(updates);
     if (result.success) {
-      showToast('Task moved successfully', 'success');
+      const movedTask = visibleTasks.find((task) => task.id === movedTaskId);
+      const movedUpdate = updates.find((update) => update.id === movedTaskId);
+      const taskName = movedTask?.name ?? 'Task';
+      const message =
+        movedTask && movedUpdate && movedTask.status !== movedUpdate.status
+          ? `Task "${taskName}" was moved from ${TASK_STATUS_LABELS[movedTask.status]} to ${TASK_STATUS_LABELS[movedUpdate.status]}`
+          : `Task "${taskName}" was reordered in ${
+              movedUpdate ? TASK_STATUS_LABELS[movedUpdate.status] : 'the column'
+            }`;
+      showNotification(message, 'success');
     } else {
       setOptimisticTasks(null);
       setPendingMoveUpdates([]);
-      showToast(result.error ?? 'Failed to move task', 'error');
+      showNotification(result.error ?? 'Failed to move task', 'error');
     }
   };
 
   const handleDelete = async () => {
     if (!deletingTaskId) return;
+    const deletingTask = visibleTasks.find((task) => task.id === deletingTaskId);
     const result = await deleteTask(deletingTaskId);
     if (result.success) {
-      showToast('Task deleted successfully', 'success');
+      showNotification(`"${deletingTask?.name ?? 'Task'}" was deleted`, 'success');
       setDeletingTaskId(null);
     } else {
-      showToast(result.error ?? 'Failed to delete task', 'error');
+      showNotification(result.error ?? 'Failed to delete task', 'error');
     }
   };
 
@@ -115,43 +123,50 @@ export function Dashboard() {
     <div className="dashboard">
       <div className="toolbar">
         <ViewToggle />
-        <button type="button" className="toolbar__add-btn" aria-label="Add task" onClick={() => setShowCreateForm(true)}>
+        <button
+          type="button"
+          className="toolbar__add-btn"
+          aria-label="Add task"
+          onClick={() => setShowCreateForm(true)}
+        >
           <Plus size={20} />
         </button>
       </div>
 
       <SearchFilter />
 
-      {/* Show loading spinner while fetching tasks */}
       {loading && visibleTasks.length === 0 && (
-        <div className="loading-spinner"><div className="loading-spinner__circle" /></div>
+        <div className="loading-spinner">
+          <div className="loading-spinner__circle" />
+        </div>
       )}
 
-      {/* Show error message if the query failed */}
       {error && (
         <div className="empty-results">
           <p className="empty-results__text">Failed to load tasks: {error}</p>
         </div>
       )}
 
-      {!loading && visibleTasks.length === 0 && Object.values(filters).some((v) => Array.isArray(v) ? v.length > 0 : v !== undefined) ? (
+      {!loading && visibleTasks.length === 0 && hasActiveFilters(filters) ? (
         <div className="empty-results">
           <p className="empty-results__text">No tasks match the current filters</p>
-          <button type="button" className="empty-results__btn" onClick={clearFilters}>Clear filters</button>
+          <button type="button" className="empty-results__btn" onClick={clearFilters}>
+            Clear filters
+          </button>
         </div>
       ) : (
-      <div className="board">
-        {COLUMNS.map((status) => (
-          <TaskColumn
-            key={status}
-            status={status}
-            tasks={visibleTasks}
-            onEdit={setEditingTask}
-            onDelete={setDeletingTaskId}
-            onMoveTasks={handleMoveTasks}
-          />
-        ))}
-      </div>
+        <div className="board">
+          {TASK_STATUS_VALUES.map((status) => (
+            <TaskColumn
+              key={status}
+              status={status}
+              tasks={visibleTasks}
+              onEdit={setEditingTask}
+              onDelete={setDeletingTaskId}
+              onMoveTasks={handleMoveTasks}
+            />
+          ))}
+        </div>
       )}
 
       <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)}>
@@ -160,7 +175,11 @@ export function Dashboard() {
 
       <Modal isOpen={editingTask !== null} onClose={() => setEditingTask(null)}>
         {editingTask && (
-          <TaskForm initialData={editingTask} onSubmit={handleUpdate} onCancel={() => setEditingTask(null)} />
+          <TaskForm
+            initialData={editingTask}
+            onSubmit={handleUpdate}
+            onCancel={() => setEditingTask(null)}
+          />
         )}
       </Modal>
 
@@ -173,8 +192,6 @@ export function Dashboard() {
         confirmLabel="Delete"
         variant="danger"
       />
-
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

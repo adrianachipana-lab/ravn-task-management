@@ -1,6 +1,6 @@
 import { gql } from '@apollo/client';
 
-// Fragment with all the task fields we need (reused across queries and mutations)
+// Fields needed to render tasks in board and list views
 const TASK_FIELDS = gql`
   fragment TaskFields on Task {
     id
@@ -10,15 +10,10 @@ const TASK_FIELDS = gql`
     pointEstimate
     tags
     position
-    createdAt
     assignee {
       id
       fullName
       avatar
-      email
-      type
-      createdAt
-      updatedAt
     }
   }
 `;

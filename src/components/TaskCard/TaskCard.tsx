@@ -1,5 +1,13 @@
 import { memo, useState, useEffect, useRef } from 'react';
-import { MoreHorizontal, Clock, Paperclip, GitBranch, MessageCircle, Pencil, Trash2 } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Clock,
+  Paperclip,
+  GitBranch,
+  MessageCircle,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 import type { Task } from '../../types/task';
 import { formatDate, getDateColor, getPointLabel } from '../../utils/date';
 import { getTagLabel, getTagClassName } from '../../utils/tags';
@@ -22,11 +30,18 @@ function handleDragEnd(e: React.DragEvent) {
 
 // Individual task card displayed in the Kanban board columns
 // Wrapped in memo() to skip re-renders when props haven't changed
-export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete, onDropTask, onDragOverTask, dropPlacement }: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({
+  task,
+  index,
+  onEdit,
+  onDelete,
+  onDropTask,
+  onDragOverTask,
+  dropPlacement,
+}: TaskCardProps) {
   // handleDragStart needs access to task.id, so it must stay inside the component
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('application/task-id', task.id);
-    e.dataTransfer.setData('application/task-status', task.status);
     e.dataTransfer.effectAllowed = 'move';
     (e.currentTarget as HTMLElement).classList.add('task-card--dragging');
   };
@@ -73,7 +88,9 @@ export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete, 
       style={{ '--stagger-delay': `${index * 50}ms` } as React.CSSProperties}
     >
       <div className="task-card__header">
-        <h3 className="task-card__title">{task.name}</h3>
+        <h3 className="task-card__title" title={task.name}>
+          {task.name}
+        </h3>
         <div className="task-card__menu-wrapper" ref={menuRef}>
           <button
             type="button"
@@ -88,14 +105,20 @@ export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete, 
               <button
                 type="button"
                 className="task-card__menu-item"
-                onClick={() => { setMenuOpen(false); onEdit(task); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onEdit(task);
+                }}
               >
                 <Pencil size={14} /> Edit
               </button>
               <button
                 type="button"
                 className="task-card__menu-item task-card__menu-item--danger"
-                onClick={() => { setMenuOpen(false); onDelete(task.id); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDelete(task.id);
+                }}
               >
                 <Trash2 size={14} /> Delete
               </button>
@@ -124,16 +147,22 @@ export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete, 
         {task.assignee && (
           <img
             className="task-card__avatar"
-            src={getAvatarUrl(task.assignee.avatar, task.assignee.fullName)}
+            src={getAvatarUrl(task.assignee.avatar)}
             alt={task.assignee.fullName}
             title={task.assignee.fullName}
           />
         )}
         {/* Decorative stat icons matching the Figma design (API doesn't provide these values) */}
         <div className="task-card__stats">
-          <span className="task-card__stat"><Paperclip size={14} /></span>
-          <span className="task-card__stat"><GitBranch size={14} /></span>
-          <span className="task-card__stat"><MessageCircle size={14} /></span>
+          <span className="task-card__stat">
+            <Paperclip size={14} />
+          </span>
+          <span className="task-card__stat">
+            <GitBranch size={14} />
+          </span>
+          <span className="task-card__stat">
+            <MessageCircle size={14} />
+          </span>
         </div>
       </div>
     </article>

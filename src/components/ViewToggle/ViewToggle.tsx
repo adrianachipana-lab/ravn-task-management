@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutGrid, List } from 'lucide-react';
+import { ROUTES } from '../../constants/navigation';
 
 // Toggle between list view (/my-tasks) and grid/board view (/)
 // Uses NavLink so the active view button is automatically highlighted
@@ -7,7 +8,7 @@ export function ViewToggle() {
   return (
     <div className="toolbar__view-toggle">
       <NavLink
-        to="/my-tasks"
+        to={ROUTES.myTasks}
         className={({ isActive }) =>
           `toolbar__view-btn${isActive ? ' toolbar__view-btn--active' : ''}`
         }
@@ -16,7 +17,7 @@ export function ViewToggle() {
         <List size={18} />
       </NavLink>
       <NavLink
-        to="/"
+        to={ROUTES.dashboard}
         end
         className={({ isActive }) =>
           `toolbar__view-btn${isActive ? ' toolbar__view-btn--active' : ''}`

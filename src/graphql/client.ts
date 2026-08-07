@@ -9,11 +9,10 @@ const API_AUTH = import.meta.env.VITE_API_TOKEN;
 // HTTP connection to the GraphQL API
 const httpLink = createHttpLink({ uri: API_URL });
 
-// Attach the Bearer token to every request
 const authLink = setContext((_, { headers }) => ({
   headers: {
     ...headers,
-    Authorization: `Bearer ${API_AUTH}`,
+    ...(API_AUTH ? { Authorization: `Bearer ${API_AUTH}` } : {}),
   },
 }));
 

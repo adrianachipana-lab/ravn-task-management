@@ -43,11 +43,19 @@ function getColumn() {
 describe('TaskColumn drag and drop', () => {
   it('does not request a move when dropping a task into its current status column', () => {
     const onMoveTasks = vi.fn();
-    render(<TaskColumn status={TaskStatus.BACKLOG} tasks={[task]} onEdit={vi.fn()} onDelete={vi.fn()} onMoveTasks={onMoveTasks} />);
+    render(
+      <TaskColumn
+        status={TaskStatus.BACKLOG}
+        tasks={[task]}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMoveTasks={onMoveTasks}
+      />,
+    );
 
     fireEvent.drop(getColumn()!, {
       dataTransfer: {
-        getData: (key: string) => key === 'application/task-id' ? task.id : TaskStatus.BACKLOG,
+        getData: (key: string) => (key === 'application/task-id' ? task.id : ''),
       },
     });
 
@@ -56,36 +64,66 @@ describe('TaskColumn drag and drop', () => {
 
   it('requests a move when dropping a task into a different status column', () => {
     const onMoveTasks = vi.fn();
-    render(<TaskColumn status={TaskStatus.BACKLOG} tasks={[task, todoTask]} onEdit={vi.fn()} onDelete={vi.fn()} onMoveTasks={onMoveTasks} />);
+    render(
+      <TaskColumn
+        status={TaskStatus.BACKLOG}
+        tasks={[task, todoTask]}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMoveTasks={onMoveTasks}
+      />,
+    );
 
     fireEvent.drop(getColumn()!, {
       dataTransfer: {
-        getData: (key: string) => key === 'application/task-id' ? todoTask.id : TaskStatus.TODO,
+        getData: (key: string) => (key === 'application/task-id' ? todoTask.id : ''),
       },
     });
 
-    expect(onMoveTasks).toHaveBeenCalledWith([{ id: todoTask.id, status: TaskStatus.BACKLOG, position: 2 }]);
+    expect(onMoveTasks).toHaveBeenCalledWith(
+      [{ id: todoTask.id, status: TaskStatus.BACKLOG, position: 2 }],
+      todoTask.id,
+    );
   });
 
   it('requests a position update when dropping a same-column task on the column background', () => {
     const onMoveTasks = vi.fn();
-    render(<TaskColumn status={TaskStatus.BACKLOG} tasks={[task, secondTask]} onEdit={vi.fn()} onDelete={vi.fn()} onMoveTasks={onMoveTasks} />);
+    render(
+      <TaskColumn
+        status={TaskStatus.BACKLOG}
+        tasks={[task, secondTask]}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMoveTasks={onMoveTasks}
+      />,
+    );
 
     fireEvent.drop(getColumn()!, {
       dataTransfer: {
-        getData: (key: string) => key === 'application/task-id' ? task.id : TaskStatus.BACKLOG,
+        getData: (key: string) => (key === 'application/task-id' ? task.id : ''),
       },
     });
 
-    expect(onMoveTasks).toHaveBeenCalledWith([
-      { id: secondTask.id, status: TaskStatus.BACKLOG, position: 1 },
-      { id: task.id, status: TaskStatus.BACKLOG, position: 2 },
-    ]);
+    expect(onMoveTasks).toHaveBeenCalledWith(
+      [
+        { id: secondTask.id, status: TaskStatus.BACKLOG, position: 1 },
+        { id: task.id, status: TaskStatus.BACKLOG, position: 2 },
+      ],
+      task.id,
+    );
   });
 
   it('requests a position update when dropping a task before another task in the same column', () => {
     const onMoveTasks = vi.fn();
-    render(<TaskColumn status={TaskStatus.BACKLOG} tasks={[task, secondTask]} onEdit={vi.fn()} onDelete={vi.fn()} onMoveTasks={onMoveTasks} />);
+    render(
+      <TaskColumn
+        status={TaskStatus.BACKLOG}
+        tasks={[task, secondTask]}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMoveTasks={onMoveTasks}
+      />,
+    );
 
     const targetCard = screen.getByText('Build dashboard').closest('article')!;
     targetCard.getBoundingClientRect = () => ({
@@ -102,19 +140,30 @@ describe('TaskColumn drag and drop', () => {
 
     fireEvent.drop(targetCard, {
       dataTransfer: {
-        getData: (key: string) => key === 'application/task-id' ? secondTask.id : TaskStatus.BACKLOG,
+        getData: (key: string) => (key === 'application/task-id' ? secondTask.id : ''),
       },
     });
 
-    expect(onMoveTasks).toHaveBeenCalledWith([
-      { id: secondTask.id, status: TaskStatus.BACKLOG, position: 1 },
-      { id: task.id, status: TaskStatus.BACKLOG, position: 2 },
-    ]);
+    expect(onMoveTasks).toHaveBeenCalledWith(
+      [
+        { id: secondTask.id, status: TaskStatus.BACKLOG, position: 1 },
+        { id: task.id, status: TaskStatus.BACKLOG, position: 2 },
+      ],
+      secondTask.id,
+    );
   });
 
   it('renumbers affected tasks when dropping between two tasks', () => {
     const onMoveTasks = vi.fn();
-    render(<TaskColumn status={TaskStatus.BACKLOG} tasks={[task, secondTask, thirdTask]} onEdit={vi.fn()} onDelete={vi.fn()} onMoveTasks={onMoveTasks} />);
+    render(
+      <TaskColumn
+        status={TaskStatus.BACKLOG}
+        tasks={[task, secondTask, thirdTask]}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMoveTasks={onMoveTasks}
+      />,
+    );
 
     const targetCard = screen.getByText('Fix filters').closest('article')!;
     targetCard.getBoundingClientRect = () => ({
@@ -131,18 +180,29 @@ describe('TaskColumn drag and drop', () => {
 
     fireEvent.drop(targetCard, {
       dataTransfer: {
-        getData: (key: string) => key === 'application/task-id' ? thirdTask.id : TaskStatus.BACKLOG,
+        getData: (key: string) => (key === 'application/task-id' ? thirdTask.id : ''),
       },
     });
 
-    expect(onMoveTasks).toHaveBeenCalledWith([
-      { id: thirdTask.id, status: TaskStatus.BACKLOG, position: 2 },
-      { id: secondTask.id, status: TaskStatus.BACKLOG, position: 3 },
-    ]);
+    expect(onMoveTasks).toHaveBeenCalledWith(
+      [
+        { id: thirdTask.id, status: TaskStatus.BACKLOG, position: 2 },
+        { id: secondTask.id, status: TaskStatus.BACKLOG, position: 3 },
+      ],
+      thirdTask.id,
+    );
   });
 
   it('shows an insertion indicator while dragging over a target card', () => {
-    render(<TaskColumn status={TaskStatus.BACKLOG} tasks={[task, secondTask]} onEdit={vi.fn()} onDelete={vi.fn()} onMoveTasks={vi.fn()} />);
+    render(
+      <TaskColumn
+        status={TaskStatus.BACKLOG}
+        tasks={[task, secondTask]}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMoveTasks={vi.fn()}
+      />,
+    );
 
     const targetCard = screen.getByText('Build dashboard').closest('article')!;
     targetCard.getBoundingClientRect = () => ({
@@ -159,7 +219,7 @@ describe('TaskColumn drag and drop', () => {
 
     fireEvent.dragOver(targetCard, {
       dataTransfer: {
-        getData: (key: string) => key === 'application/task-id' ? secondTask.id : TaskStatus.BACKLOG,
+        getData: (key: string) => (key === 'application/task-id' ? secondTask.id : ''),
       },
     });
 
