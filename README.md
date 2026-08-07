@@ -9,33 +9,45 @@ https://ravn-task-management.vercel.app
 ## Screenshots
 
 ### Dashboard (Board View)
-<!-- Add screenshot or GIF here -->
+![Dashboard board view](docs/screenshots/dashboard.png)
 
 The main view displays tasks organized in five Kanban columns: Backlog, To Do, In Progress, Done, and Cancelled. Each card shows the task name, tags, due date, estimated points, and assignee avatar.
 
 ### My Tasks (List View)
-<!-- Add screenshot or GIF here -->
+![My Tasks list view](docs/screenshots/my-tasks.png)
 
 An alternative table layout groups tasks by status in collapsible sections. Clicking a row opens the edit form.
 
 ### Create / Edit Task
-<!-- Add screenshot or GIF here -->
+![Create task modal](docs/screenshots/create-task.png)
+
+![Edit task modal](docs/screenshots/edit-task.png)
 
 A modal with chip-style selectors for estimate, assignee, tags, and due date. On mobile, the date picker uses an iOS-style 3D scroll wheel.
 
+### Task Actions
+![Task card options menu](docs/screenshots/card-options.png)
+
+![Delete task confirmation](docs/screenshots/delete-task.png)
+
+The task options menu exposes edit and delete actions. Delete uses a confirmation modal before calling the API.
+
+### Filters
+![Advanced filters panel](docs/screenshots/filters.png)
+
+The advanced filter panel supports status, assignee, due date, points, and tag filters.
+
 ### Profile Modal
-<!-- Add screenshot or GIF here -->
+![Profile popover](docs/screenshots/profile-popover.png)
 
 Clicking the header avatar opens a compact profile modal/popover with the logged-in user's avatar, name, email, type, and account dates. The data comes from the API `profile` query.
 
 ### Notifications
-<!-- Add screenshot or GIF here -->
+![Notification center](docs/screenshots/notifications.png)
 
 The header bell opens a notification center with recent task actions. Create, update, delete, move, and reorder notifications include task-specific details, such as the task name and changed fields.
 
 ### Settings
-<!-- Add screenshot or GIF here -->
-
 Displays the logged-in user's profile information fetched from the API.
 
 ## Setup & Running
