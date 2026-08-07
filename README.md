@@ -11,10 +11,14 @@ https://ravn-task-management.vercel.app
 ### Dashboard (Board View)
 ![Dashboard board view](docs/screenshots/dashboard.png)
 
+![Dashboard mobile view](docs/screenshots/dashboard-mobile.png)
+
 The main view displays tasks organized in five Kanban columns: Backlog, To Do, In Progress, Done, and Cancelled. Each card shows the task name, tags, due date, estimated points, and assignee avatar.
 
 ### My Tasks (List View)
 ![My Tasks list view](docs/screenshots/my-tasks.png)
+
+![My Tasks mobile view](docs/screenshots/my-tasks-mobile.png)
 
 An alternative table layout groups tasks by status in collapsible sections. Clicking a row opens the edit form.
 
@@ -22,6 +26,10 @@ An alternative table layout groups tasks by status in collapsible sections. Clic
 ![Create task modal](docs/screenshots/create-task.png)
 
 ![Edit task modal](docs/screenshots/edit-task.png)
+
+![Create task mobile modal](docs/screenshots/create-task-mobile.png)
+
+![Edit task mobile modal](docs/screenshots/edit-task-mobile.png)
 
 A modal with chip-style selectors for estimate, assignee, tags, and due date. On mobile, the date picker uses an iOS-style 3D scroll wheel.
 
@@ -35,15 +43,21 @@ The task options menu exposes edit and delete actions. Delete uses a confirmatio
 ### Filters
 ![Advanced filters panel](docs/screenshots/filters.png)
 
+![Advanced filters mobile panel](docs/screenshots/filters-mobile.png)
+
 The advanced filter panel supports status, assignee, due date, points, and tag filters.
 
 ### Profile Modal
 ![Profile popover](docs/screenshots/profile-popover.png)
 
+![Profile mobile popover](docs/screenshots/profile-popover-mobile.png)
+
 Clicking the header avatar opens a compact profile modal/popover with the logged-in user's avatar, name, email, type, and account dates. The data comes from the API `profile` query.
 
 ### Notifications
 ![Notification center](docs/screenshots/notifications.png)
+
+![Notification mobile center](docs/screenshots/notifications-mobile.png)
 
 The header bell opens a notification center with recent task actions. Create, update, delete, move, and reorder notifications include task-specific details, such as the task name and changed fields.
 
