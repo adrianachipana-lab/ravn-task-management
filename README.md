@@ -16,7 +16,7 @@ The main view displays tasks organized in five Kanban columns: Backlog, To Do, I
 ### My Tasks (List View)
 <!-- Add screenshot or GIF here -->
 
-An alternative table layout groups tasks by status in collapsible sections. Clicking a task name opens the edit form.
+An alternative table layout groups tasks by status in collapsible sections. Clicking a row opens the edit form.
 
 ### Create / Edit Task
 <!-- Add screenshot or GIF here -->
@@ -103,9 +103,10 @@ src/
 │   ├── TaskForm/        # Create/edit task form with chip selectors
 │   ├── Toast/           # Notification toasts
 │   └── ViewToggle/      # Board/list view toggle
+├── constants/           # Shared UI options and navigation definitions
 ├── context/             # React contexts (filters, create-task bridge)
 ├── graphql/             # Apollo client, queries, and mutations
-├── hooks/               # Custom hooks (useTasks, useToast, useCreateTask)
+├── hooks/               # Custom hooks (useTasks, useNotifications, useCreateTask)
 ├── pages/               # Route pages (Dashboard, MyTasks, Settings, NotFound)
 ├── styles/              # Global CSS and design tokens
 ├── types/               # TypeScript type definitions
@@ -116,11 +117,12 @@ src/
 
 - **CSS Variables + BEM**: Chose vanilla CSS with design tokens over CSS-in-JS or Tailwind for simplicity and zero runtime cost. BEM naming prevents class collisions without build tools.
 - **Apollo Client over fetch**: Apollo provides automatic caching, refetching, loading/error states, and TypeScript integration out of the box.
+- **Shared UI catalogs**: Status, tag, and point options live in `src/constants/taskOptions.ts` because the API accepts these enum values but does not expose a metadata query for rendering form/filter options. Navigation routes and labels live in `src/constants/navigation.ts` so desktop and mobile navigation stay in sync.
 - **Lazy-loaded pages**: Each page is code-split with `React.lazy()` to minimize the initial bundle size.
 - **Context for cross-component communication**: `FilterContext` shares filter state between the search bar (Header) and the filter panel (SearchFilter) without prop drilling. `CreateTaskContext` bridges the bottom nav's "+" button with the dashboard's modal.
 - **Server-side + client-side filtering**: Filters like status, tags, and assignee are sent to the API. Date filtering is done client-side because the API requires exact timestamp matching.
 - **Optimistic drag-and-drop updates**: Task moves are reflected in the UI immediately, then synchronized with the API. If the API rejects the update, the UI reverts and shows an error toast.
-- **Integer task positions**: Same-column reordering renumbers affected tasks with integer positions (`1, 2, 3...`) to avoid backend/database errors from fractional values.
+- **Integer task positions**: Reordering renumbers affected tasks with integer positions (`1, 2, 3...`) to avoid backend/database errors from fractional values. Status and position changes happen through drag-and-drop, not through the edit form.
 - **`useMemo` for context values**: Prevents unnecessary re-renders of all consumers when the provider re-renders.
 
 ## Features Completed
@@ -135,6 +137,7 @@ src/
 - [x] Edit task via 3-dot menu
 - [x] Delete task with confirmation dialog
 - [x] Toast notifications for success/error feedback
+- [x] Notification center in the header bell with specific recent task actions
 - [x] Search by name (real-time filtering)
 - [x] Advanced filters: status, assignee, due date, points, tags
 - [x] Settings page with user profile from API
@@ -151,11 +154,13 @@ src/
 - [x] **Responsive mobile layout** — Sidebar becomes a slide-in drawer, bottom navigation bar for quick access, mobile tab navigation between Dashboard and Tasks.
 - [x] **View toggle** — Switch between board (Kanban) and list (table) views using the toolbar icons.
 
-### Additional Features (not in Figma, added to improve UX)
+### Additional UX Improvements
 - [x] **Same-column task reordering** — Cards can be reordered inside a column by dropping before/after another card, updating the editable `position` field through the API.
 - [x] **Visual drop indicators** — While dragging, a red insertion line shows whether the task will be placed before or after the hovered card.
 - [x] **Optimistic task moves** — The board updates immediately on drop and waits for backend confirmation, avoiding a slow drag-and-drop feel.
 - [x] **Neutral avatar fallback** — Users without a valid API avatar show a local generic SVG instead of a misleading stock face.
+- [x] **Profile popover** — Clicking the header avatar shows a compact profile summary using the `profile` query.
+- [x] **Specific action notifications** — Create, update, delete, and move notifications include task names. Updates list changed fields such as assignee, due date, points, tags, and title changes; moves distinguish column changes from same-column reordering.
 - [x] **Advanced filter panel** — The Figma only shows a search bar, but the challenge doc requires filtering by status, tags, assignee, due date, and estimated points. I added a collapsible filter panel with dropdowns and tag toggle buttons that sends filters to the API. Available in both Dashboard and My Tasks views.
 - [x] **Error boundary** — Catches runtime errors and shows a recovery UI instead of a white screen.
 - [x] **Click-outside to close** — Menus, dropdowns, and modals close when clicking outside.

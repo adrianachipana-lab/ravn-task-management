@@ -30,8 +30,9 @@ src/
 ├── hooks/              # Reusable state and API logic
 │   ├── useTasks.ts     # Task CRUD through GraphQL/Apollo
 │   ├── useCreateTask.ts# Bridge for opening create task from mobile nav
-│   └── useToast.ts     # Toast notification state
+│   └── useNotifications.ts # Notification context access
 ├── graphql/            # Apollo client, queries, and mutations
+├── constants/          # Shared UI options and navigation definitions
 ├── context/            # Filter state and create-task bridge
 ├── types/              # TypeScript domain types
 │   └── task.ts         # Task, User, enums, inputs
@@ -52,6 +53,7 @@ Why this structure:
 - `pages/` contains route-level views that coordinate data and page state.
 - `hooks/` keeps business logic and API operations outside UI components.
 - `graphql/` centralizes queries and mutations.
+- `constants/` stores local UI option catalogs for API enum values and shared navigation definitions.
 - `context/` shares small pieces of cross-component state, such as filters.
 - `types/` keeps the domain model consistent across the app.
 - `utils/` contains pure helpers that can be tested independently.
@@ -138,7 +140,7 @@ export function useTasks() {
 }
 ```
 
-Custom hooks keep reusable logic outside components. `useTasks` owns GraphQL CRUD operations, `useToast` owns notification state, and `useCreateTask` connects mobile navigation with the dashboard create modal.
+Custom hooks keep reusable logic outside components. `useTasks` owns GraphQL CRUD operations, `useNotifications` exposes toast and notification-center state, and `useCreateTask` connects mobile navigation with the dashboard create modal.
 
 ### 7. List Rendering and Keys
 
@@ -175,9 +177,9 @@ Conditional rendering is used for empty states, loading states, modals, dropdown
 ```tsx
 <BrowserRouter>
   <Routes>
-    <Route path="/" element={<Dashboard />} />
-    <Route path="/my-tasks" element={<MyTasks />} />
-    <Route path="/settings" element={<Settings />} />
+    <Route path={ROUTES.dashboard} element={<Dashboard />} />
+    <Route path={ROUTES.myTasks} element={<MyTasks />} />
+    <Route path={ROUTES.settings} element={<Settings />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 </BrowserRouter>
@@ -308,6 +310,8 @@ VITE_API_URL=https://syn-api-production-e95c.up.railway.app/graphql
 VITE_API_TOKEN=your-token-here
 ```
 
+Status, tag, and point options are defined locally in `src/constants/taskOptions.ts`. They are not fetched from the API because the challenge API accepts those enum values but does not expose a metadata query for option lists. Navigation routes and labels are centralized in `src/constants/navigation.ts` so sidebar, mobile tabs, bottom nav, and route definitions stay aligned.
+
 ---
 
 ## Dashboard Flow
@@ -373,12 +377,12 @@ For edit:
 Fields handled by the form:
 
 - Name
-- Status
-- Position
 - Tags
 - Due date
 - Estimated points
 - Assignee
+
+Status and position are preserved by the edit form. Those values are changed from the board drag-and-drop flow instead.
 
 The mobile date picker uses `@ncdai/react-wheel-picker` to match the iOS-style picker shown in the Figma design.
 
@@ -390,7 +394,7 @@ The app supports:
 
 - Name
 - Due date
-- Owner/assignee
+- Assignee
 - Status
 - Tags
 - Estimated points
@@ -433,13 +437,15 @@ Features:
 - First visible tag plus a `+N` button for extra tags
 - Assignee avatar and name
 - Due date color accents
-- Task name button that opens the edit modal
+- Row click opens the edit modal
 
 ---
 
 ## Settings Page
 
-The settings route uses the `profile` query and displays:
+The header avatar opens a compact profile popover with the logged-in user's name, email, type, creation date, and avatar.
+
+The settings route also uses the `profile` query and displays:
 
 - Full name
 - Email
@@ -536,6 +542,7 @@ For SPA routing, `vercel.json` rewrites all routes back to `index.html`:
 - [x] Active navigation state
 - [x] Header avatar
 - [x] Notification icon
+- [x] Notification center with specific recent task actions
 - [x] Search icon
 - [x] Board/list view icons
 - [x] Red plus button
@@ -555,7 +562,8 @@ For SPA routing, `vercel.json` rewrites all routes back to `index.html`:
 
 - [x] Update task mutation
 - [x] Edit modal
-- [x] Editable name, due date, position, status, tags, and estimated points
+- [x] Editable name, due date, tags, estimated points, and assignee
+- [x] Status and position updates through drag-and-drop
 - [x] Confirm and cancel buttons
 - [x] Delete task mutation
 - [x] Delete confirmation
@@ -565,7 +573,7 @@ For SPA routing, `vercel.json` rewrites all routes back to `index.html`:
 
 - [x] Name filter
 - [x] Due date filter
-- [x] Owner/assignee filter
+- [x] Assignee filter
 - [x] Status filter
 - [x] Tags filter
 - [x] Estimated points filter
@@ -594,4 +602,6 @@ For SPA routing, `vercel.json` rewrites all routes back to `index.html`:
 - [x] Optimistic task moves
 - [x] Responsive mobile layout
 - [x] Neutral avatar fallback
+- [x] Header profile popover
+- [x] Specific action notifications with task names, changed update fields, and move/reorder context
 - [x] React Doctor 100/100
