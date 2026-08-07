@@ -23,6 +23,16 @@ An alternative table layout groups tasks by status in collapsible sections. Clic
 
 A modal with chip-style selectors for estimate, assignee, tags, and due date. On mobile, the date picker uses an iOS-style 3D scroll wheel.
 
+### Profile Modal
+<!-- Add screenshot or GIF here -->
+
+Clicking the header avatar opens a compact profile modal/popover with the logged-in user's avatar, name, email, type, and account dates. The data comes from the API `profile` query.
+
+### Notifications
+<!-- Add screenshot or GIF here -->
+
+The header bell opens a notification center with recent task actions. Create, update, delete, move, and reorder notifications include task-specific details, such as the task name and changed fields.
+
 ### Settings
 <!-- Add screenshot or GIF here -->
 
@@ -92,7 +102,7 @@ src/
 │   ├── ConfirmDialog/   # Delete confirmation modal
 │   ├── DatePicker/      # iOS-style 3D wheel date picker
 │   ├── ErrorBoundary/   # Runtime error catch boundary
-│   ├── Header/          # Top bar with search and avatar
+│   ├── Header/          # Top bar with search, profile popover, and notification center
 │   ├── LoadingSpinner/  # Loading indicator
 │   ├── MobileTabs/      # Mobile tab navigation
 │   ├── Modal/           # Reusable modal overlay
@@ -101,16 +111,16 @@ src/
 │   ├── TaskCard/        # Individual task card (board view)
 │   ├── TaskColumn/      # Kanban column with drag-and-drop
 │   ├── TaskForm/        # Create/edit task form with chip selectors
-│   ├── Toast/           # Notification toasts
+│   ├── Toast/           # Toast UI for global notifications
 │   └── ViewToggle/      # Board/list view toggle
 ├── constants/           # Shared UI options and navigation definitions
-├── context/             # React contexts (filters, create-task bridge)
+├── context/             # React contexts (filters, create-task bridge, notifications)
 ├── graphql/             # Apollo client, queries, and mutations
 ├── hooks/               # Custom hooks (useTasks, useNotifications, useCreateTask)
 ├── pages/               # Route pages (Dashboard, MyTasks, Settings, NotFound)
 ├── styles/              # Global CSS and design tokens
 ├── types/               # TypeScript type definitions
-└── utils/               # Pure utility functions (date formatting, tag helpers, avatar fallback)
+└── utils/               # Pure utility functions (dates, tags, avatars, filters, notifications)
 ```
 
 ## Architecture Decisions
