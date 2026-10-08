@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import type { Task, TaskStatus } from '../../types/task';
+import type { Task, TaskStatus, TaskPositionUpdate } from '../../types/task';
 import { TaskCard } from '../TaskCard';
 import { TASK_STATUS_LABELS } from '../../constants/taskOptions';
 
 type DropPlacement = 'before' | 'after';
-type TaskPositionUpdate = { id: string; status: TaskStatus; position: number };
 
 interface TaskColumnProps {
   status: TaskStatus;

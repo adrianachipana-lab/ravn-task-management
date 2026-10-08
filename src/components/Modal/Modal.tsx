@@ -6,10 +6,11 @@ interface ModalProps {
   children: React.ReactNode;
   overlayClassName?: string;
   dialogClassName?: string;
+  ariaLabel?: string;
 }
 
-// Reusable modal dialog with overlay backdrop
-// Closes on Escape key or clicking outside the dialog
+// Reusable modal dialog using <dialog>.showModal() for native focus trap and semantics
+// Closes on Escape key (native) or clicking the backdrop
 // Locks body scroll while open to prevent background scrolling
 export function Modal({
   isOpen,
@@ -17,9 +18,9 @@ export function Modal({
   children,
   overlayClassName,
   dialogClassName,
+  ariaLabel = 'Task dialog',
 }: ModalProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-  // Keep a ref to the latest onClose so the Escape listener doesn't go stale
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const onCloseRef = useRef(onClose);
 
   useEffect(() => {
@@ -31,43 +32,76 @@ export function Modal({
   }, []);
 
   useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (isOpen) {
+      // showModal() provides native focus trap, ::backdrop, and aria-modal
+      if (!dialog.open) {
+        if (typeof dialog.showModal === 'function') {
+          try {
+            dialog.showModal();
+          } catch {
+            // jsdom doesn't fully support showModal
+          }
+        }
+        // Ensure open attribute is set (showModal sets it in browsers, but not in jsdom)
+        if (!dialog.open) dialog.setAttribute('open', '');
+      }
+      document.body.style.overflow = 'hidden';
+    } else if (dialog.open) {
+      dialog.close();
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  // Handle native cancel event (Escape key when using showModal)
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const handleCancel = (e: Event) => {
+      e.preventDefault();
+      stableClose();
+    };
+
+    dialog.addEventListener('cancel', handleCancel);
+    return () => dialog.removeEventListener('cancel', handleCancel);
+  }, [stableClose]);
+
+  // Fallback Escape handler for environments without native dialog (jsdom)
+  useEffect(() => {
     if (!isOpen) return;
-    document.body.style.overflow = 'hidden';
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') stableClose();
     };
     document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = '';
-      document.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, stableClose]);
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === overlayRef.current) onClose();
-  };
-
-  const handleOverlayKeyDown = (e: React.KeyboardEvent) => {
-    if (e.target === overlayRef.current && (e.key === 'Enter' || e.key === ' ')) onClose();
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    // Close when clicking the dialog element itself (the backdrop area), not its children
+    if (e.target === dialogRef.current) stableClose();
   };
 
   return (
-    <div
-      className={`modal__overlay${overlayClassName ? ` ${overlayClassName}` : ''}`}
-      ref={overlayRef}
-      onClick={handleOverlayClick}
-      onKeyDown={handleOverlayKeyDown}
-      role="presentation"
+    <dialog
+      ref={dialogRef}
+      className={`modal${overlayClassName ? ` ${overlayClassName}` : ''}${dialogClassName ? ` ${dialogClassName}` : ''}`}
+      role="dialog"
+      aria-label={ariaLabel}
+      aria-modal="true"
+      onClick={handleBackdropClick}
     >
-      <dialog
-        className={`modal${dialogClassName ? ` ${dialogClassName}` : ''}`}
-        open
-        aria-label="Task dialog"
-      >
+      <div className="modal__content">
         {children}
-      </dialog>
-    </div>
+      </div>
+    </dialog>
   );
 }

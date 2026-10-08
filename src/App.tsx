@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState, useRef, useCallback, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ApolloProvider } from '@apollo/client/react';
 import { client } from './graphql/client';
@@ -28,15 +28,29 @@ function AppShell() {
   const { filters, setFilters } = useFilters();
   const { toasts, removeToast } = useNotifications();
 
-  const handleSearchChange = (value: string) => {
-    setFilters({ ...filters, name: value || undefined });
-  };
+  const [searchInput, setSearchInput] = useState(filters.name ?? '');
+  const debounceRef = useRef<number | undefined>(undefined);
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchInput(value);
+      window.clearTimeout(debounceRef.current);
+      debounceRef.current = window.setTimeout(() => {
+        setFilters({ ...filters, name: value || undefined });
+      }, 300);
+    },
+    [filters, setFilters],
+  );
+
+  useEffect(() => {
+    return () => window.clearTimeout(debounceRef.current);
+  }, []);
 
   return (
     <div className="app-layout">
       <Sidebar />
       <div className="app-layout__main">
-        <Header searchValue={filters.name ?? ''} onSearchChange={handleSearchChange} />
+        <Header searchValue={searchInput} onSearchChange={handleSearchChange} />
         <MobileTabs />
         <main className="app-layout__content">
           <ErrorBoundary>

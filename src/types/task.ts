@@ -62,6 +62,9 @@ export interface UpdateTaskInput extends Partial<CreateTaskInput> {
   position?: number;
 }
 
+// Shape for drag-and-drop position updates
+export type TaskPositionUpdate = { id: string; status: TaskStatus; position: number };
+
 // Optional filters that can be applied to the task list
 export type FilterInput = {
   name?: string;

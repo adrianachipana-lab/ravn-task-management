@@ -1,32 +1,26 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@apollo/client/react';
 import { Plus } from 'lucide-react';
 import { ViewToggle } from '../../components/ViewToggle';
 import { SearchFilter } from '../../components/SearchFilter';
-import { useFilters } from '../../hooks/useFilters';
 import { TaskColumn } from '../../components/TaskColumn';
 import { Modal } from '../../components/Modal';
 import { TaskForm } from '../../components/TaskForm';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { useTasks } from '../../hooks/useTasks';
+import { useTaskActions } from '../../hooks/useTaskActions';
+import { useFilters } from '../../hooks/useFilters';
 import { useNotifications } from '../../hooks/useNotifications';
-import { useCreateTask } from '../../hooks/useCreateTask';
-import type { Task, CreateTaskInput, TaskStatus, User } from '../../types/task';
+import type { Task, TaskPositionUpdate } from '../../types/task';
 import { TASK_STATUS_LABELS, TASK_STATUS_VALUES } from '../../constants/taskOptions';
 import { hasActiveFilters } from '../../utils/filters';
-import { GET_USERS } from '../../graphql/queries';
-import { buildTaskUpdateNotification } from '../../utils/notifications';
 
-type TaskMoveUpdate = { id: string; status: TaskStatus; position: number };
-
-function applyTaskMoveUpdates(tasks: Task[], updates: TaskMoveUpdate[]) {
+function applyTaskPositionUpdates(tasks: Task[], updates: TaskPositionUpdate[]) {
   return tasks.map((task) => {
     const update = updates.find((item) => item.id === task.id);
     return update ? { ...task, status: update.status, position: update.position } : task;
   });
 }
 
-function hasAppliedTaskMoveUpdates(tasks: Task[], updates: TaskMoveUpdate[]) {
+function hasAppliedTaskPositionUpdates(tasks: Task[], updates: TaskPositionUpdate[]) {
   return updates.every((update) => {
     const task = tasks.find((item) => item.id === update.id);
     return task?.status === update.status && task.position === update.position;
@@ -34,58 +28,38 @@ function hasAppliedTaskMoveUpdates(tasks: Task[], updates: TaskMoveUpdate[]) {
 }
 
 export function Dashboard() {
-  const { tasks, loading, error, createTask, updateTask, updateTasks, deleteTask } = useTasks();
-  const { data: usersData } = useQuery<{ users: User[] }>(GET_USERS);
+  const {
+    tasks,
+    loading,
+    error,
+    updateTasks,
+    showCreateForm,
+    setShowCreateForm,
+    editingTask,
+    setEditingTask,
+    deletingTaskId,
+    setDeletingTaskId,
+    handleCreate,
+    handleUpdate,
+    handleDelete,
+  } = useTaskActions();
   const { filters, clearFilters } = useFilters();
   const { showNotification } = useNotifications();
 
-  const { setOnCreate } = useCreateTask();
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [optimisticTasks, setOptimisticTasks] = useState<Task[] | null>(null);
-  const [pendingMoveUpdates, setPendingMoveUpdates] = useState<TaskMoveUpdate[]>([]);
+  const [pendingMoveUpdates, setPendingMoveUpdates] = useState<TaskPositionUpdate[]>([]);
   const visibleTasks = optimisticTasks ?? tasks;
 
   useEffect(() => {
-    if (pendingMoveUpdates.length > 0 && hasAppliedTaskMoveUpdates(tasks, pendingMoveUpdates)) {
+    if (pendingMoveUpdates.length > 0 && hasAppliedTaskPositionUpdates(tasks, pendingMoveUpdates)) {
       setOptimisticTasks(null);
       setPendingMoveUpdates([]);
     }
   }, [pendingMoveUpdates, tasks]);
 
-  useEffect(() => {
-    setOnCreate(() => setShowCreateForm(true));
-    return () => setOnCreate(() => {});
-  }, [setOnCreate]);
-  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
-
-  const handleCreate = async (input: CreateTaskInput) => {
-    const result = await createTask(input);
-    if (result.success) {
-      showNotification(`Task "${input.name}" was created successfully`, 'success');
-      setShowCreateForm(false);
-    } else {
-      showNotification(result.error ?? 'Failed to create task', 'error');
-    }
-  };
-
-  const handleUpdate = async (input: CreateTaskInput) => {
-    if (!editingTask) return;
-    const result = await updateTask({ id: editingTask.id, ...input });
-    if (result.success) {
-      showNotification(
-        buildTaskUpdateNotification(editingTask, input, usersData?.users ?? []),
-        'success',
-      );
-      setEditingTask(null);
-    } else {
-      showNotification(result.error ?? 'Failed to update task', 'error');
-    }
-  };
-
-  const handleMoveTasks = async (updates: TaskMoveUpdate[], movedTaskId: string) => {
+  const handleMoveTasks = async (updates: TaskPositionUpdate[], movedTaskId: string) => {
     if (updates.length === 0) return;
-    setOptimisticTasks(applyTaskMoveUpdates(visibleTasks, updates));
+    setOptimisticTasks(applyTaskPositionUpdates(visibleTasks, updates));
     setPendingMoveUpdates(updates);
 
     const result = await updateTasks(updates);
@@ -104,18 +78,6 @@ export function Dashboard() {
       setOptimisticTasks(null);
       setPendingMoveUpdates([]);
       showNotification(result.error ?? 'Failed to move task', 'error');
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deletingTaskId) return;
-    const deletingTask = visibleTasks.find((task) => task.id === deletingTaskId);
-    const result = await deleteTask(deletingTaskId);
-    if (result.success) {
-      showNotification(`"${deletingTask?.name ?? 'Task'}" was deleted`, 'success');
-      setDeletingTaskId(null);
-    } else {
-      showNotification(result.error ?? 'Failed to delete task', 'error');
     }
   };
 
@@ -169,11 +131,11 @@ export function Dashboard() {
         </div>
       )}
 
-      <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)}>
+      <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)} ariaLabel="Create task">
         <TaskForm onSubmit={handleCreate} onCancel={() => setShowCreateForm(false)} />
       </Modal>
 
-      <Modal isOpen={editingTask !== null} onClose={() => setEditingTask(null)}>
+      <Modal isOpen={editingTask !== null} onClose={() => setEditingTask(null)} ariaLabel="Edit task">
         {editingTask && (
           <TaskForm
             initialData={editingTask}

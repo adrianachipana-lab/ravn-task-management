@@ -1,9 +1,10 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
 import type { Task, CreateTaskInput, UpdateTaskInput } from '../types/task';
 import { useFilters } from './useFilters';
 import { GET_TASKS } from '../graphql/queries';
 import { CREATE_TASK, UPDATE_TASK, DELETE_TASK } from '../graphql/mutations';
+import { formatDateInputValue } from '../utils/date';
 
 type TaskQueryInput = Partial<
   Pick<CreateTaskInput, 'name' | 'status' | 'tags' | 'pointEstimate'> & { assigneeId: string }
@@ -37,8 +38,7 @@ export function useTasks() {
   const tasks = useMemo(() => {
     const all = data?.tasks ?? [];
     if (!filters.dueDate) return all;
-    const filterDate = new Date(filters.dueDate).toDateString();
-    return all.filter((task) => new Date(task.dueDate).toDateString() === filterDate);
+    return all.filter((task) => formatDateInputValue(task.dueDate) === filters.dueDate);
   }, [data?.tasks, filters.dueDate]);
 
   const [createTaskMutation] = useMutation(CREATE_TASK);
@@ -56,14 +56,14 @@ export function useTasks() {
               assigneeId: input.assigneeId || undefined,
             },
           },
+          refetchQueries: [{ query: GET_TASKS, variables: { input: apiInput } }],
         });
-        await refetch();
         return { success: true as const };
       } catch (err) {
         return { success: false, error: getErrorMessage(err, 'Failed to create task') };
       }
     },
-    [createTaskMutation, refetch],
+    [createTaskMutation, apiInput],
   );
 
   const [updateTaskMutation] = useMutation(UPDATE_TASK);
@@ -96,15 +96,25 @@ export function useTasks() {
     [runUpdateTaskMutation, refetch],
   );
 
+  // Drag queue: prevents overlapping drag mutations
+  const dragQueueRef = useRef(Promise.resolve<TaskMutationResult>({ success: true }));
+
   const updateTasks = useCallback(
-    async (inputs: UpdateTaskInput[]): Promise<TaskMutationResult> => {
-      try {
-        await Promise.all(inputs.map((input) => runUpdateTaskMutation(input)));
-        await refetch();
-        return { success: true as const };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err, 'Failed to update tasks') };
-      }
+    (inputs: UpdateTaskInput[]): Promise<TaskMutationResult> => {
+      const operation = dragQueueRef.current.then(async () => {
+        try {
+          await Promise.all(inputs.map((input) => runUpdateTaskMutation(input)));
+          await refetch();
+          return { success: true as const } as TaskMutationResult;
+        } catch (err) {
+          return {
+            success: false,
+            error: getErrorMessage(err, 'Failed to update tasks'),
+          } as TaskMutationResult;
+        }
+      });
+      dragQueueRef.current = operation;
+      return operation;
     },
     [runUpdateTaskMutation, refetch],
   );
@@ -113,14 +123,24 @@ export function useTasks() {
   const deleteTask = useCallback(
     async (taskId: string): Promise<TaskMutationResult> => {
       try {
-        await deleteTaskMutation({ variables: { input: { id: taskId } } });
-        await refetch();
+        await deleteTaskMutation({
+          variables: { input: { id: taskId } },
+          update(cache) {
+            cache.modify({
+              fields: {
+                tasks(existing: readonly { __ref: string }[] = [], { readField }) {
+                  return existing.filter((ref) => readField('id', ref) !== taskId);
+                },
+              },
+            });
+          },
+        });
         return { success: true as const };
       } catch (err) {
         return { success: false, error: getErrorMessage(err, 'Failed to delete task') };
       }
     },
-    [deleteTaskMutation, refetch],
+    [deleteTaskMutation],
   );
 
   return {
