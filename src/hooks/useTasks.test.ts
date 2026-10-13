@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { formatDate, getDateColor, getPointLabel } from '../utils/date';
 import { getTagLabel, getTagClassName } from '../utils/tags';
+import { buildPositionUpdates } from '../utils/dragPositions';
+import { TaskStatus, type Task } from '../types/task';
 
-// Since useTasks now depends on Apollo Client and a live API,
-// we test the utility functions it relies on instead.
-// Integration tests for the full hook would require mocking the GraphQL client.
+// Utility function tests (unchanged from original)
 
 describe('date utilities', () => {
   it('formatDate returns a non-empty string', () => {
@@ -52,5 +52,52 @@ describe('tag utilities', () => {
     expect(getTagClassName('REACT')).toBe('react');
     expect(getTagClassName('NODE_JS')).toBe('nodejs');
     expect(getTagClassName('ANDROID')).toBe('android');
+  });
+});
+
+// Drag queue behavior tests via buildPositionUpdates (pure function)
+
+const base: Task = {
+  id: 'task-1',
+  name: 'Build dashboard',
+  status: TaskStatus.BACKLOG,
+  dueDate: '2026-12-01T00:00:00Z',
+  pointEstimate: 'FOUR',
+  tags: ['REACT'],
+  assignee: null,
+  position: 1,
+  createdAt: '2026-01-01T00:00:00Z',
+};
+
+describe('drag position calculations', () => {
+  it('produces no updates when task stays in place', () => {
+    const updates = buildPositionUpdates([base], 'task-1', TaskStatus.BACKLOG, null);
+    expect(updates).toEqual([]);
+  });
+
+  it('handles cross-column move correctly', () => {
+    const todoTask: Task = { ...base, id: 'todo-1', status: TaskStatus.TODO };
+    const updates = buildPositionUpdates(
+      [base, todoTask],
+      'todo-1',
+      TaskStatus.BACKLOG,
+      null,
+    );
+    expect(updates).toEqual([
+      { id: 'todo-1', status: TaskStatus.BACKLOG, position: 2 },
+    ]);
+  });
+
+  it('renumbers all affected tasks on reorder', () => {
+    const a: Task = { ...base, id: 'a', position: 1 };
+    const b: Task = { ...base, id: 'b', position: 2 };
+    const c: Task = { ...base, id: 'c', position: 3 };
+    const updates = buildPositionUpdates([a, b, c], 'c', TaskStatus.BACKLOG, 'a');
+    // c moves before a: c=1, a=2, b=3
+    expect(updates).toEqual([
+      { id: 'c', status: TaskStatus.BACKLOG, position: 1 },
+      { id: 'a', status: TaskStatus.BACKLOG, position: 2 },
+      { id: 'b', status: TaskStatus.BACKLOG, position: 3 },
+    ]);
   });
 });

@@ -10,7 +10,7 @@ type TaskQueryInput = Partial<
   Pick<CreateTaskInput, 'name' | 'status' | 'tags' | 'pointEstimate'> & { assigneeId: string }
 >;
 
-type TaskMutationResult = { success: true } | { success: false; error: string };
+export type TaskMutationResult = { success: true } | { success: false; error: string };
 
 function getErrorMessage(err: unknown, fallback: string) {
   return err instanceof Error ? err.message : fallback;
@@ -83,55 +83,13 @@ export function useTasks() {
     [updateTaskMutation],
   );
 
-  const updateTask = useCallback(
-    async (input: UpdateTaskInput): Promise<TaskMutationResult> => {
-      try {
-        await runUpdateTaskMutation(input);
-        await refetch();
-        return { success: true as const };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err, 'Failed to update task') };
-      }
-    },
-    [runUpdateTaskMutation, refetch],
-  );
-
-  // Drag queue: prevents overlapping drag mutations and coordinates with deletes
+  // Drag queue: serializes drag mutations and coordinates with deletes.
+  // Every operation chains off the previous one so they never overlap.
+  // The queue promise always resolves (never rejects) to keep the chain alive.
   const dragQueueRef = useRef(Promise.resolve<TaskMutationResult>({ success: true }));
+  const isDeletingRef = useRef(false);
 
-  const updateTasks = useCallback(
-    (inputs: UpdateTaskInput[]): Promise<TaskMutationResult> => {
-      const operation = dragQueueRef.current.then(async () => {
-        const settled = await Promise.allSettled(
-          inputs.map((input) => runUpdateTaskMutation(input)),
-        );
-        const failures = settled.filter((r) => r.status === 'rejected');
-        // Always refetch to reconcile with server state, whether partial or full success
-        await refetch();
-        if (failures.length > 0) {
-          return {
-            success: false,
-            error: `${failures.length} of ${inputs.length} updates failed`,
-          } as TaskMutationResult;
-        }
-        return { success: true as const } as TaskMutationResult;
-      });
-      dragQueueRef.current = operation;
-      return operation;
-    },
-    [runUpdateTaskMutation, refetch],
-  );
-
-  // Wait for pending drags to finish before deleting
-  const safeDeleteTask = useCallback(
-    async (taskId: string): Promise<TaskMutationResult> => {
-      // Drain the drag queue first so we don't delete a task mid-move
-      await dragQueueRef.current;
-      return deleteTask(taskId);
-    },
-    [deleteTask],
-  );
-
+  // --- deleteTask must be declared before safeDeleteTask ---
   const [deleteTaskMutation] = useMutation(DELETE_TASK);
   const deleteTask = useCallback(
     async (taskId: string): Promise<TaskMutationResult> => {
@@ -154,6 +112,84 @@ export function useTasks() {
       }
     },
     [deleteTaskMutation],
+  );
+
+  const updateTask = useCallback(
+    async (input: UpdateTaskInput): Promise<TaskMutationResult> => {
+      try {
+        // Wait for pending drag/delete operations before editing
+        await dragQueueRef.current;
+        await runUpdateTaskMutation(input);
+        await refetch();
+        return { success: true as const };
+      } catch (err) {
+        return { success: false, error: getErrorMessage(err, 'Failed to update task') };
+      }
+    },
+    [runUpdateTaskMutation, refetch],
+  );
+
+  const updateTasks = useCallback(
+    (inputs: UpdateTaskInput[]): Promise<TaskMutationResult> => {
+      if (isDeletingRef.current) {
+        return Promise.resolve({
+          success: false,
+          error: 'Cannot move tasks while a delete is in progress',
+        });
+      }
+      const operation = dragQueueRef.current.then(
+        async (): Promise<TaskMutationResult> => {
+          try {
+            if (isDeletingRef.current) {
+              return {
+                success: false,
+                error: 'Cannot move tasks while a delete is in progress',
+              };
+            }
+            const settled = await Promise.allSettled(
+              inputs.map((input) => runUpdateTaskMutation(input)),
+            );
+            const failures = settled.filter((r) => r.status === 'rejected');
+            try {
+              await refetch();
+            } catch {
+              // Refetch failure must not break the queue
+            }
+            if (failures.length > 0) {
+              return {
+                success: false,
+                error: `${failures.length} of ${inputs.length} updates failed`,
+              };
+            }
+            return { success: true as const };
+          } catch {
+            return { success: false, error: 'Failed to update tasks' };
+          }
+        },
+      );
+      dragQueueRef.current = operation;
+      return operation;
+    },
+    [runUpdateTaskMutation, refetch],
+  );
+
+  // Delete goes through the queue so new moves wait for it to finish
+  const safeDeleteTask = useCallback(
+    (taskId: string): Promise<TaskMutationResult> => {
+      isDeletingRef.current = true;
+      const operation = dragQueueRef.current.then(
+        async (): Promise<TaskMutationResult> => {
+          try {
+            return await deleteTask(taskId);
+          } finally {
+            isDeletingRef.current = false;
+          }
+        },
+      );
+      dragQueueRef.current = operation;
+      return operation;
+    },
+    [deleteTask],
   );
 
   return {

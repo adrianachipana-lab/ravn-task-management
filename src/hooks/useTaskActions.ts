@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@apollo/client/react';
 import type { Task, CreateTaskInput, User } from '../types/task';
-import { useTasks } from './useTasks';
+import { useTasks, type TaskMutationResult } from './useTasks';
 import { useNotifications } from './useNotifications';
 import { useCreateTask } from './useCreateTask';
 import { GET_USERS } from '../graphql/queries';
@@ -47,8 +47,8 @@ export function useTaskActions() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deletingTaskId) return;
+  const handleDelete = async (): Promise<TaskMutationResult | undefined> => {
+    if (!deletingTaskId) return undefined;
     const deletingTask = tasks.find((task) => task.id === deletingTaskId);
     const result = await deleteTask(deletingTaskId);
     if (result.success) {
@@ -57,6 +57,7 @@ export function useTaskActions() {
     } else {
       showNotification(result.error ?? 'Failed to delete task', 'error');
     }
+    return result;
   };
 
   return {

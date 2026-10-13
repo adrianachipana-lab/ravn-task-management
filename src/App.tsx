@@ -30,17 +30,29 @@ function AppShell() {
 
   const [searchInput, setSearchInput] = useState(filters.name ?? '');
   const debounceRef = useRef<number | undefined>(undefined);
+  // Ref tracks the latest filters so the debounce timer never captures a stale snapshot
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
 
   const handleSearchChange = useCallback(
     (value: string) => {
       setSearchInput(value);
       window.clearTimeout(debounceRef.current);
       debounceRef.current = window.setTimeout(() => {
-        setFilters({ ...filters, name: value || undefined });
+        setFilters({ ...filtersRef.current, name: value || undefined });
       }, 300);
     },
-    [filters, setFilters],
+    [setFilters],
   );
+
+  // Sync search box when filters are cleared externally (e.g. "Clear filters" button)
+  // and cancel any pending debounce so it doesn't re-apply the old search text
+  useEffect(() => {
+    if (filters.name === undefined && searchInput !== '') {
+      setSearchInput('');
+      window.clearTimeout(debounceRef.current);
+    }
+  }, [filters.name, searchInput]);
 
   useEffect(() => {
     return () => window.clearTimeout(debounceRef.current);
