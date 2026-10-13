@@ -75,10 +75,22 @@ export function Dashboard() {
             }`;
       showNotification(message, 'success');
     } else {
+      // Refetch already happened inside the queue, so just clear optimistic state
       setOptimisticTasks(null);
       setPendingMoveUpdates([]);
       showNotification(result.error ?? 'Failed to move task', 'error');
     }
+  };
+
+  // Override handleDelete to also clear the deleted task from optimistic state
+  const handleDeleteWithCleanup = async () => {
+    if (!deletingTaskId) return;
+    // Remove from optimistic view immediately so the card disappears
+    if (optimisticTasks) {
+      setOptimisticTasks(optimisticTasks.filter((t) => t.id !== deletingTaskId));
+      setPendingMoveUpdates(pendingMoveUpdates.filter((u) => u.id !== deletingTaskId));
+    }
+    await handleDelete();
   };
 
   return (
@@ -148,7 +160,7 @@ export function Dashboard() {
       <ConfirmDialog
         isOpen={deletingTaskId !== null}
         onClose={() => setDeletingTaskId(null)}
-        onConfirm={handleDelete}
+        onConfirm={handleDeleteWithCleanup}
         title="Delete Task"
         message="Are you sure you want to delete this task? This action cannot be undone."
         confirmLabel="Delete"

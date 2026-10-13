@@ -96,27 +96,40 @@ export function useTasks() {
     [runUpdateTaskMutation, refetch],
   );
 
-  // Drag queue: prevents overlapping drag mutations
+  // Drag queue: prevents overlapping drag mutations and coordinates with deletes
   const dragQueueRef = useRef(Promise.resolve<TaskMutationResult>({ success: true }));
 
   const updateTasks = useCallback(
     (inputs: UpdateTaskInput[]): Promise<TaskMutationResult> => {
       const operation = dragQueueRef.current.then(async () => {
-        try {
-          await Promise.all(inputs.map((input) => runUpdateTaskMutation(input)));
-          await refetch();
-          return { success: true as const } as TaskMutationResult;
-        } catch (err) {
+        const settled = await Promise.allSettled(
+          inputs.map((input) => runUpdateTaskMutation(input)),
+        );
+        const failures = settled.filter((r) => r.status === 'rejected');
+        // Always refetch to reconcile with server state, whether partial or full success
+        await refetch();
+        if (failures.length > 0) {
           return {
             success: false,
-            error: getErrorMessage(err, 'Failed to update tasks'),
+            error: `${failures.length} of ${inputs.length} updates failed`,
           } as TaskMutationResult;
         }
+        return { success: true as const } as TaskMutationResult;
       });
       dragQueueRef.current = operation;
       return operation;
     },
     [runUpdateTaskMutation, refetch],
+  );
+
+  // Wait for pending drags to finish before deleting
+  const safeDeleteTask = useCallback(
+    async (taskId: string): Promise<TaskMutationResult> => {
+      // Drain the drag queue first so we don't delete a task mid-move
+      await dragQueueRef.current;
+      return deleteTask(taskId);
+    },
+    [deleteTask],
   );
 
   const [deleteTaskMutation] = useMutation(DELETE_TASK);
@@ -150,6 +163,6 @@ export function useTasks() {
     createTask,
     updateTask,
     updateTasks,
-    deleteTask,
+    deleteTask: safeDeleteTask,
   };
 }

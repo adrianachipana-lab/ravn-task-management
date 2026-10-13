@@ -12,7 +12,7 @@ import { TASK_POINT_OPTIONS, TASK_TAG_OPTIONS } from '../../constants/taskOption
 
 interface TaskFormProps {
   initialData?: Task;
-  onSubmit: (data: CreateTaskInput) => void;
+  onSubmit: (data: CreateTaskInput) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -80,14 +80,18 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
     }
     setNameError('');
     setIsSubmitting(true);
-    onSubmit({
-      name,
-      status: initialData?.status ?? TaskStatus.BACKLOG,
-      dueDate: dueDate ? `${dueDate}T12:00:00` : new Date().toISOString(),
-      pointEstimate: pointEstimate || 'ZERO',
-      tags,
-      assigneeId,
-    });
+    try {
+      await onSubmit({
+        name,
+        status: initialData?.status ?? TaskStatus.BACKLOG,
+        dueDate: dueDate ? `${dueDate}T12:00:00` : new Date().toISOString(),
+        pointEstimate: pointEstimate || 'ZERO',
+        tags,
+        assigneeId,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
