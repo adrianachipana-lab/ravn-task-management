@@ -12,7 +12,7 @@ import { TASK_POINT_OPTIONS, TASK_TAG_OPTIONS } from '../../constants/taskOption
 
 interface TaskFormProps {
   initialData?: Task;
-  onSubmit: (data: CreateTaskInput) => void;
+  onSubmit: (data: CreateTaskInput) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -68,30 +68,48 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
     e.target.style.height = `${Math.min(e.target.scrollHeight, 180)}px`;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [nameError, setNameError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    onSubmit({
-      name,
-      status: initialData?.status ?? TaskStatus.BACKLOG,
-      dueDate: dueDate ? `${dueDate}T12:00:00` : new Date().toISOString(),
-      pointEstimate: pointEstimate || 'ZERO',
-      tags,
-      assigneeId,
-    });
+    if (!name.trim()) {
+      setNameError('Task title is required');
+      titleRef.current?.focus();
+      return;
+    }
+    setNameError('');
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        name,
+        status: initialData?.status ?? TaskStatus.BACKLOG,
+        dueDate: dueDate ? `${dueDate}T12:00:00` : new Date().toISOString(),
+        pointEstimate: pointEstimate || 'ZERO',
+        tags,
+        assigneeId,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <form className="task-form" ref={formRef} onSubmit={handleSubmit}>
       <textarea
         ref={titleRef}
-        className="task-form__title-input"
+        className={`task-form__title-input${nameError ? ' task-form__title-input--error' : ''}`}
         value={name}
-        onChange={handleNameChange}
+        onChange={(e) => {
+          handleNameChange(e);
+          if (nameError) setNameError('');
+        }}
         placeholder="Task Title"
         aria-label="Task title"
+        aria-invalid={!!nameError}
         rows={1}
       />
+      {nameError && <p className="task-form__error" role="alert">{nameError}</p>}
 
       <div className="task-form__chips">
         <div className="task-form__chip-wrapper">
@@ -235,7 +253,7 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
         <button type="button" className="task-form__cancel-btn" onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" className="task-form__submit-btn">
+        <button type="submit" className="task-form__submit-btn" disabled={isSubmitting}>
           {initialData ? 'Update' : 'Create'}
         </button>
       </div>

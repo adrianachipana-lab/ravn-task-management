@@ -1,121 +1,170 @@
-import { useEffect, useState } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  closestCorners,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { ViewToggle } from '../../components/ViewToggle';
 import { SearchFilter } from '../../components/SearchFilter';
-import { useFilters } from '../../hooks/useFilters';
 import { TaskColumn } from '../../components/TaskColumn';
+import { TaskCard } from '../../components/TaskCard';
 import { Modal } from '../../components/Modal';
 import { TaskForm } from '../../components/TaskForm';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { useTasks } from '../../hooks/useTasks';
+import { useTaskActions } from '../../hooks/useTaskActions';
+import { useFilters } from '../../hooks/useFilters';
 import { useNotifications } from '../../hooks/useNotifications';
-import { useCreateTask } from '../../hooks/useCreateTask';
-import type { Task, CreateTaskInput, TaskStatus, User } from '../../types/task';
+import type { Task, TaskStatus, TaskPositionUpdate } from '../../types/task';
 import { TASK_STATUS_LABELS, TASK_STATUS_VALUES } from '../../constants/taskOptions';
 import { hasActiveFilters } from '../../utils/filters';
-import { GET_USERS } from '../../graphql/queries';
-import { buildTaskUpdateNotification } from '../../utils/notifications';
+import { buildPositionUpdates } from '../../utils/dragPositions';
 
-type TaskMoveUpdate = { id: string; status: TaskStatus; position: number };
-
-function applyTaskMoveUpdates(tasks: Task[], updates: TaskMoveUpdate[]) {
+function applyTaskPositionUpdates(tasks: Task[], updates: TaskPositionUpdate[]) {
   return tasks.map((task) => {
     const update = updates.find((item) => item.id === task.id);
     return update ? { ...task, status: update.status, position: update.position } : task;
   });
 }
 
-function hasAppliedTaskMoveUpdates(tasks: Task[], updates: TaskMoveUpdate[]) {
-  return updates.every((update) => {
-    const task = tasks.find((item) => item.id === update.id);
-    return task?.status === update.status && task.position === update.position;
-  });
+function getColumnId(id: string | number): TaskStatus | null {
+  const str = String(id);
+  if (str.startsWith('column-')) return str.slice(7) as TaskStatus;
+  return null;
 }
 
 export function Dashboard() {
-  const { tasks, loading, error, createTask, updateTask, updateTasks, deleteTask } = useTasks();
-  const { data: usersData } = useQuery<{ users: User[] }>(GET_USERS);
+  const {
+    tasks,
+    loading,
+    error,
+    updateTasks,
+    showCreateForm,
+    setShowCreateForm,
+    editingTask,
+    setEditingTask,
+    deletingTaskId,
+    setDeletingTaskId,
+    handleCreate,
+    handleUpdate,
+    handleDelete,
+  } = useTaskActions();
   const { filters, clearFilters } = useFilters();
   const { showNotification } = useNotifications();
 
-  const { setOnCreate } = useCreateTask();
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [optimisticTasks, setOptimisticTasks] = useState<Task[] | null>(null);
-  const [pendingMoveUpdates, setPendingMoveUpdates] = useState<TaskMoveUpdate[]>([]);
+  const pendingMoveCountRef = useRef(0);
   const visibleTasks = optimisticTasks ?? tasks;
 
-  useEffect(() => {
-    if (pendingMoveUpdates.length > 0 && hasAppliedTaskMoveUpdates(tasks, pendingMoveUpdates)) {
-      setOptimisticTasks(null);
-      setPendingMoveUpdates([]);
-    }
-  }, [pendingMoveUpdates, tasks]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeTask = useMemo(
+    () => (activeId ? visibleTasks.find((t) => t.id === activeId) ?? null : null),
+    [activeId, visibleTasks],
+  );
 
-  useEffect(() => {
-    setOnCreate(() => setShowCreateForm(true));
-    return () => setOnCreate(() => {});
-  }, [setOnCreate]);
-  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  // Sensors: pointer (mouse), touch, and keyboard
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } });
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: { delay: 200, tolerance: 5 },
+  });
+  const keyboardSensor = useSensor(KeyboardSensor, {
+    coordinateGetter: sortableKeyboardCoordinates,
+  });
+  const sensors = useSensors(pointerSensor, touchSensor, keyboardSensor);
 
-  const handleCreate = async (input: CreateTaskInput) => {
-    const result = await createTask(input);
-    if (result.success) {
-      showNotification(`Task "${input.name}" was created successfully`, 'success');
-      setShowCreateForm(false);
-    } else {
-      showNotification(result.error ?? 'Failed to create task', 'error');
-    }
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
   };
 
-  const handleUpdate = async (input: CreateTaskInput) => {
-    if (!editingTask) return;
-    const result = await updateTask({ id: editingTask.id, ...input });
-    if (result.success) {
-      showNotification(
-        buildTaskUpdateNotification(editingTask, input, usersData?.users ?? []),
-        'success',
-      );
-      setEditingTask(null);
-    } else {
-      showNotification(result.error ?? 'Failed to update task', 'error');
-    }
+  // Track which column the card is currently over for visual feedback
+  const handleDragOver = (_event: DragOverEvent) => {
+    // @dnd-kit handles the visual indicators via isOver in useDroppable
   };
 
-  const handleMoveTasks = async (updates: TaskMoveUpdate[], movedTaskId: string) => {
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || !active) return;
+
+    const draggedTaskId = String(active.id);
+
+    // Determine target column: either the column droppable or the column of the over task
+    let targetStatus: TaskStatus | null = getColumnId(over.id);
+    let overTaskId: string | null = null;
+
+    if (!targetStatus) {
+      // Dropped over another task card
+      const overTask = visibleTasks.find((t) => t.id === String(over.id));
+      if (overTask) {
+        targetStatus = overTask.status;
+        overTaskId = overTask.id;
+      }
+    }
+
+    if (!targetStatus) return;
+
+    // Don't fire if dropped back in exact same spot
+    const draggedTask = visibleTasks.find((t) => t.id === draggedTaskId);
+    if (!draggedTask) return;
+
+    const updates = buildPositionUpdates(visibleTasks, draggedTaskId, targetStatus, overTaskId);
+    const movedTaskId = draggedTaskId;
     if (updates.length === 0) return;
-    setOptimisticTasks(applyTaskMoveUpdates(visibleTasks, updates));
-    setPendingMoveUpdates(updates);
 
-    const result = await updateTasks(updates);
-    if (result.success) {
-      const movedTask = visibleTasks.find((task) => task.id === movedTaskId);
-      const movedUpdate = updates.find((update) => update.id === movedTaskId);
-      const taskName = movedTask?.name ?? 'Task';
-      const message =
-        movedTask && movedUpdate && movedTask.status !== movedUpdate.status
-          ? `Task "${taskName}" was moved from ${TASK_STATUS_LABELS[movedTask.status]} to ${TASK_STATUS_LABELS[movedUpdate.status]}`
-          : `Task "${taskName}" was reordered in ${
-              movedUpdate ? TASK_STATUS_LABELS[movedUpdate.status] : 'the column'
-            }`;
-      showNotification(message, 'success');
-    } else {
-      setOptimisticTasks(null);
-      setPendingMoveUpdates([]);
-      showNotification(result.error ?? 'Failed to move task', 'error');
-    }
+    // Fire the move
+    pendingMoveCountRef.current++;
+    setOptimisticTasks(applyTaskPositionUpdates(optimisticTasks ?? tasks, updates));
+
+    updateTasks(updates)
+      .then((result) => {
+        if (result.success) {
+          const movedUpdate = updates.find((u) => u.id === movedTaskId);
+          const taskName = draggedTask.name;
+          const message =
+            draggedTask.status !== targetStatus
+              ? `Task "${taskName}" was moved from ${TASK_STATUS_LABELS[draggedTask.status]} to ${TASK_STATUS_LABELS[targetStatus!]}`
+              : `Task "${taskName}" was reordered in ${
+                  movedUpdate ? TASK_STATUS_LABELS[movedUpdate.status] : 'the column'
+                }`;
+          showNotification(message, 'success');
+        } else {
+          showNotification(result.error ?? 'Failed to move task', 'error');
+        }
+      })
+      .finally(() => {
+        pendingMoveCountRef.current--;
+        if (pendingMoveCountRef.current === 0) {
+          setOptimisticTasks(null);
+        }
+      });
   };
 
-  const handleDelete = async () => {
+  const handleDragCancel = () => {
+    setActiveId(null);
+  };
+
+  const handleDeleteWithCleanup = async () => {
     if (!deletingTaskId) return;
-    const deletingTask = visibleTasks.find((task) => task.id === deletingTaskId);
-    const result = await deleteTask(deletingTaskId);
-    if (result.success) {
-      showNotification(`"${deletingTask?.name ?? 'Task'}" was deleted`, 'success');
-      setDeletingTaskId(null);
-    } else {
-      showNotification(result.error ?? 'Failed to delete task', 'error');
+    const currentTasks = optimisticTasks ?? tasks;
+
+    // Remove from optimistic view immediately so the card disappears
+    setOptimisticTasks(currentTasks.filter((t) => t.id !== deletingTaskId));
+
+    const result = await handleDelete();
+    if (result && !result.success) {
+      // Delete failed: fall back to server state which still has the task
+      setOptimisticTasks(null);
+    } else if (pendingMoveCountRef.current === 0) {
+      setOptimisticTasks(null);
     }
   };
 
@@ -155,25 +204,45 @@ export function Dashboard() {
           </button>
         </div>
       ) : (
-        <div className="board">
-          {TASK_STATUS_VALUES.map((status) => (
-            <TaskColumn
-              key={status}
-              status={status}
-              tasks={visibleTasks}
-              onEdit={setEditingTask}
-              onDelete={setDeletingTaskId}
-              onMoveTasks={handleMoveTasks}
-            />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <div className="board">
+            {TASK_STATUS_VALUES.map((status) => (
+              <TaskColumn
+                key={status}
+                status={status}
+                tasks={visibleTasks}
+                onEdit={setEditingTask}
+                onDelete={setDeletingTaskId}
+                activeId={activeId}
+              />
+            ))}
+          </div>
+
+          <DragOverlay>
+            {activeTask ? (
+              <TaskCard
+                task={activeTask}
+                index={0}
+                onEdit={() => {}}
+                onDelete={() => {}}
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       )}
 
-      <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)}>
+      <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)} ariaLabel="Create task">
         <TaskForm onSubmit={handleCreate} onCancel={() => setShowCreateForm(false)} />
       </Modal>
 
-      <Modal isOpen={editingTask !== null} onClose={() => setEditingTask(null)}>
+      <Modal isOpen={editingTask !== null} onClose={() => setEditingTask(null)} ariaLabel="Edit task">
         {editingTask && (
           <TaskForm
             initialData={editingTask}
@@ -186,7 +255,7 @@ export function Dashboard() {
       <ConfirmDialog
         isOpen={deletingTaskId !== null}
         onClose={() => setDeletingTaskId(null)}
-        onConfirm={handleDelete}
+        onConfirm={handleDeleteWithCleanup}
         title="Delete Task"
         message="Are you sure you want to delete this task? This action cannot be undone."
         confirmLabel="Delete"

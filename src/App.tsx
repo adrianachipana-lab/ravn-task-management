@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState, useRef, useCallback, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ApolloProvider } from '@apollo/client/react';
 import { client } from './graphql/client';
@@ -28,15 +28,41 @@ function AppShell() {
   const { filters, setFilters } = useFilters();
   const { toasts, removeToast } = useNotifications();
 
-  const handleSearchChange = (value: string) => {
-    setFilters({ ...filters, name: value || undefined });
-  };
+  const [searchInput, setSearchInput] = useState(filters.name ?? '');
+  const debounceRef = useRef<number | undefined>(undefined);
+  // Ref tracks the latest filters so the debounce timer never captures a stale snapshot
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchInput(value);
+      window.clearTimeout(debounceRef.current);
+      debounceRef.current = window.setTimeout(() => {
+        setFilters({ ...filtersRef.current, name: value || undefined });
+      }, 300);
+    },
+    [setFilters],
+  );
+
+  // Sync search box when filters are cleared externally (e.g. "Clear filters" button)
+  // and cancel any pending debounce so it doesn't re-apply the old search text
+  useEffect(() => {
+    if (filters.name === undefined && searchInput !== '') {
+      setSearchInput('');
+      window.clearTimeout(debounceRef.current);
+    }
+  }, [filters.name, searchInput]);
+
+  useEffect(() => {
+    return () => window.clearTimeout(debounceRef.current);
+  }, []);
 
   return (
     <div className="app-layout">
       <Sidebar />
       <div className="app-layout__main">
-        <Header searchValue={filters.name ?? ''} onSearchChange={handleSearchChange} />
+        <Header searchValue={searchInput} onSearchChange={handleSearchChange} />
         <MobileTabs />
         <main className="app-layout__content">
           <ErrorBoundary>

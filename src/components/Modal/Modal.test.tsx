@@ -35,7 +35,7 @@ describe('Modal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('calls onClose when clicking the overlay', async () => {
+  it('calls onClose when clicking the backdrop', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     const { container } = render(
@@ -44,13 +44,13 @@ describe('Modal', () => {
       </Modal>,
     );
 
-    // Click on the overlay (not the dialog content)
-    const overlay = container.querySelector('.modal__overlay')!;
-    await user.click(overlay);
+    // Click on the dialog element itself (backdrop area)
+    const dialog = container.querySelector('dialog')!;
+    await user.click(dialog);
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('does NOT close when clicking inside the dialog', async () => {
+  it('does NOT close when clicking inside the dialog content', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     render(
@@ -88,12 +88,23 @@ describe('Modal', () => {
     expect(document.body.style.overflow).toBe('');
   });
 
-  it('renders a dialog element with aria-label', () => {
+  it('renders a dialog element with aria-label and aria-modal', () => {
     render(
       <Modal isOpen onClose={vi.fn()}>
         <p>Content</p>
       </Modal>,
     );
-    expect(screen.getByRole('dialog')).toHaveAttribute('aria-label', 'Task dialog');
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-label', 'Task dialog');
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+  });
+
+  it('accepts a custom aria-label', () => {
+    render(
+      <Modal isOpen onClose={vi.fn()} ariaLabel="Create task">
+        <p>Content</p>
+      </Modal>,
+    );
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-label', 'Create task');
   });
 });

@@ -10,54 +10,13 @@ interface TaskCardProps {
   index: number;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
-  onDropTask?: (event: React.DragEvent, targetTask: Task) => void;
-  onDragOverTask?: (event: React.DragEvent, targetTask: Task) => void;
-  dropPlacement?: 'before' | 'after' | null;
 }
 
-// Pure function: doesn't use component state, so it's defined outside to avoid re-creation on each render
-function handleDragEnd(e: React.DragEvent) {
-  (e.currentTarget as HTMLElement).classList.remove('task-card--dragging');
-}
-
-// Individual task card displayed in the Kanban board columns
-// Wrapped in memo() to skip re-renders when props haven't changed
-export const TaskCard = memo(function TaskCard({
-  task,
-  index,
-  onEdit,
-  onDelete,
-  onDropTask,
-  onDragOverTask,
-  dropPlacement,
-}: TaskCardProps) {
-  // handleDragStart needs access to task.id, so it must stay inside the component
-  const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData('application/task-id', task.id);
-    e.dataTransfer.effectAllowed = 'move';
-    (e.currentTarget as HTMLElement).classList.add('task-card--dragging');
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    if (!onDropTask) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    onDragOverTask?.(e, task);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    if (!onDropTask) return;
-    e.preventDefault();
-    e.stopPropagation();
-    onDropTask(e, task);
-  };
-
-  // Context menu state (3-dot options button)
+export const TaskCard = memo(function TaskCard({ task, index, onEdit, onDelete }: TaskCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const dateColor = getDateColor(task.dueDate);
 
-  // Close the menu when clicking outside of it
   useEffect(() => {
     if (!menuOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -71,12 +30,7 @@ export const TaskCard = memo(function TaskCard({
 
   return (
     <article
-      className={`task-card${dropPlacement ? ` task-card--drop-${dropPlacement}` : ''}`}
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
+      className="task-card"
       style={{ '--stagger-delay': `${index * 50}ms` } as React.CSSProperties}
     >
       <div className="task-card__header">
@@ -87,7 +41,10 @@ export const TaskCard = memo(function TaskCard({
           <button
             type="button"
             className={`task-card__options-btn${menuOpen ? ' task-card__options-btn--visible' : ''}`}
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(!menuOpen);
+            }}
             aria-label={`Options for ${task.name}`}
           >
             <MoreHorizontal size={16} />

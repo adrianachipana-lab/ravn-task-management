@@ -1,15 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { useState } from 'react';
 import { Plus, ChevronDown } from 'lucide-react';
 import { ViewToggle } from '../../components/ViewToggle';
 import { SearchFilter } from '../../components/SearchFilter';
 import { Modal } from '../../components/Modal';
 import { TaskForm } from '../../components/TaskForm';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { useTasks } from '../../hooks/useTasks';
-import { useNotifications } from '../../hooks/useNotifications';
-import { useCreateTask } from '../../hooks/useCreateTask';
-import type { Task, CreateTaskInput, User } from '../../types/task';
+import { useTaskActions } from '../../hooks/useTaskActions';
 import {
   formatListDate,
   getPointLabel,
@@ -19,64 +15,28 @@ import {
 import { getTagLabel, getTagClassName } from '../../utils/tags';
 import { getAvatarUrl } from '../../utils/avatar';
 import { TASK_STATUS_OPTIONS } from '../../constants/taskOptions';
-import { GET_USERS } from '../../graphql/queries';
-import { buildTaskUpdateNotification } from '../../utils/notifications';
 
 export function MyTasks() {
-  const { tasks, loading, error, createTask, updateTask, deleteTask } = useTasks();
-  const { data: usersData } = useQuery<{ users: User[] }>(GET_USERS);
-  const { showNotification } = useNotifications();
+  const {
+    tasks,
+    loading,
+    error,
+    showCreateForm,
+    setShowCreateForm,
+    editingTask,
+    setEditingTask,
+    deletingTaskId,
+    setDeletingTaskId,
+    handleCreate,
+    handleUpdate,
+    handleDelete,
+  } = useTaskActions();
 
-  const { setOnCreate } = useCreateTask();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [tagPopup, setTagPopup] = useState<string | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setOnCreate(() => setShowCreateForm(true));
-    return () => setOnCreate(() => {});
-  }, [setOnCreate]);
 
   const toggleSection = (status: string) => {
     setCollapsed((prev) => ({ ...prev, [status]: !prev[status] }));
-  };
-
-  const handleCreate = async (input: CreateTaskInput) => {
-    const result = await createTask(input);
-    if (result.success) {
-      showNotification(`Task "${input.name}" was created successfully`, 'success');
-      setShowCreateForm(false);
-    } else {
-      showNotification(result.error ?? 'Failed to create task', 'error');
-    }
-  };
-
-  const handleUpdate = async (input: CreateTaskInput) => {
-    if (!editingTask) return;
-    const result = await updateTask({ id: editingTask.id, ...input });
-    if (result.success) {
-      showNotification(
-        buildTaskUpdateNotification(editingTask, input, usersData?.users ?? []),
-        'success',
-      );
-      setEditingTask(null);
-    } else {
-      showNotification(result.error ?? 'Failed to update task', 'error');
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deletingTaskId) return;
-    const deletingTask = tasks.find((task) => task.id === deletingTaskId);
-    const result = await deleteTask(deletingTaskId);
-    if (result.success) {
-      showNotification(`"${deletingTask?.name ?? 'Task'}" was deleted`, 'success');
-      setDeletingTaskId(null);
-    } else {
-      showNotification(result.error ?? 'Failed to delete task', 'error');
-    }
   };
 
   return (
@@ -223,11 +183,11 @@ export function MyTasks() {
         })}
       </div>
 
-      <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)}>
+      <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)} ariaLabel="Create task">
         <TaskForm onSubmit={handleCreate} onCancel={() => setShowCreateForm(false)} />
       </Modal>
 
-      <Modal isOpen={editingTask !== null} onClose={() => setEditingTask(null)}>
+      <Modal isOpen={editingTask !== null} onClose={() => setEditingTask(null)} ariaLabel="Edit task">
         {editingTask && (
           <TaskForm
             initialData={editingTask}
